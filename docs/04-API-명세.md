@@ -1,0 +1,74 @@
+# 04. API 명세
+
+## REST 엔드포인트
+
+### 인증·팀
+```
+GET    /api/auth/kakao            # 카카오 로그인 시작 (인가 코드 요청)
+GET    /api/auth/kakao/callback   # 카카오 인가 콜백 → 세션/JWT 발급
+POST   /api/auth/logout
+GET    /api/teams
+POST   /api/teams
+PATCH  /api/teams/:id
+POST   /api/teams/:id/invitations
+```
+
+### 회의
+```
+GET    /api/meetings
+POST   /api/meetings
+PATCH  /api/meetings/:id
+DELETE /api/meetings/:id
+POST   /api/meetings/:id/start    # T0 발행
+POST   /api/meetings/:id/end      # 회의록 그루핑 트리거
+```
+
+### 아젠다
+```
+GET    /api/meetings/:id/agendas
+POST   /api/meetings/:id/agendas
+PATCH  /api/agendas/:id
+DELETE /api/agendas/:id
+POST   /api/meetings/:id/agendas/generate   # LLM 아젠다 생성
+POST   /api/agendas/:id/activate
+```
+
+### 발화·기여도
+```
+POST   /api/utterances
+GET    /api/meetings/:id/contributions
+```
+
+### 결정·액션
+```
+GET    /api/decisions
+POST   /api/decisions
+PATCH  /api/decisions/:id
+DELETE /api/decisions/:id
+GET    /api/action-items
+POST   /api/action-items
+PATCH  /api/action-items/:id
+DELETE /api/action-items/:id
+POST   /api/meetings/:id/extract-additional   # LLM 누락 항목 추출
+POST   /api/meetings/:id/confirm              # 회의 산출물 확정
+```
+
+## WebSocket 이벤트
+
+| 이벤트 | 방향 | 용도 |
+| --- | --- | --- |
+| `meeting:join` / `meeting:leave` | client → server | 회의 룸 입·퇴장 |
+| `meeting:t0` | server → client | 시각 동기화 기준점 broadcast |
+| `utterance:new` | client → server | 확정 발화(텍스트) 전송 |
+| `contribution:update` | server → client | 기여도 갱신 (0.5초 디바운스) |
+| `agenda:status-change` | 양방향 | 안건 상태 변경 broadcast |
+| `decision:new` / `action:new` | 양방향 | 결정·액션 추가 broadcast |
+| `user:speaking-start` / `speaking-end` | 양방향 | 발화 중 🎤 표시 |
+
+## 발화 전송 페이로드 (`POST /api/utterances`, `utterance:new`)
+
+- `utterance_id`, `text`, `char_count`
+- `started_at_offset_ms`, `ended_at_offset_ms`
+- `confidence` — Moonshine 추론 신뢰도 (산출 방식 검증 필요, [09](09-미결정-사항.md))
+- 전송 시점: VAD가 발화 종료를 감지하고 Moonshine 추론이 완료된 직후 (발화 단위, 디바운스 없음)
+- 전송 내용은 텍스트와 메타데이터뿐 — 오디오는 전송하지 않음

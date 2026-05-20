@@ -1,0 +1,52 @@
+# 줄바꿈 정규화 — checkin은 LF, checkout은 OS 기본
+* text=auto eol=lf
+
+# 한글·다국어 파일명 보존 (Windows에서 깨짐 방지)
+* working-tree-encoding=UTF-8
+
+# 명시적 텍스트
+*.md          text
+*.txt         text
+*.json        text
+*.yml         text
+*.yaml        text
+*.ts          text
+*.tsx         text
+*.js          text
+*.jsx         text
+*.cjs         text
+*.mjs         text
+*.html        text
+*.css         text
+*.scss        text
+
+# Windows 전용 스크립트만 CRLF 유지
+*.bat         text eol=crlf
+*.cmd         text eol=crlf
+
+# Shell 스크립트는 항상 LF
+*.sh          text eol=lf
+
+# 바이너리 — diff 비교 금지
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.ico         binary
+*.icns        binary
+*.webp        binary
+*.pdf         binary
+*.zip         binary
+*.gz          binary
+*.tar         binary
+*.7z          binary
+*.wav         binary
+*.mp3         binary
+*.webm        binary
+*.onnx        binary
+*.bin         binary
+*.asar        binary
+
+# 잠금 파일 — diff 출력은 숨김, GitHub linguist에서도 "생성된 파일"로 표시
+# (충돌 시에는 그냥 둘 다 둔 뒤 npm install 재실행으로 재생성 권장)
+package-lock.json  text -diff linguist-generated=true

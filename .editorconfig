@@ -1,0 +1,20 @@
+# EditorConfig — 에디터 공통 규약
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown은 줄 끝 공백이 줄바꿈(<br>)을 의미할 수 있어 보존
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefile은 탭 필수
+[Makefile]
+indent_style = tab
