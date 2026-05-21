@@ -12,7 +12,7 @@
 | 음성 원본 미저장 | 음성은 기기 밖으로 나가지 않음. 서버에는 텍스트만 전송·저장 |
 | 방식 B (각자 녹음) | 각자 본인 마이크로 본인 발화만 수집 → 화자 분리 불필요 |
 | 사이드 창 폭 | 회의 중 보조 창은 폭 400px 고정 |
-| LLM 호출 최소화 | GPT-4o-mini, 회의당 아젠다 생성 1회 + 회의 후 추출 1회 |
+| LLM 사용 | GPT-4o-mini. 회의 중 안건별 요약(안건당 1회) + 회의 후 종합 정리 1회 + 다음 회의 안건 생성 1회 |
 
 ## 기술 스택 요약
 
@@ -20,7 +20,7 @@
 - **STT**: Moonshine ONNX (`transformers.js`) + Silero VAD (`@ricky0123/vad-web`)
 - **백엔드**: NestJS · MySQL · WebSocket (캐시는 NestJS 인메모리 — ElastiCache 미사용)
 - **인프라**: AWS (Start AWS 학생 프로그램) — EC2 t3.small · RDS MySQL 프리티어 · 서울 리전
-- **LLM**: OpenAI GPT-4o-mini (회의당 2회 이내)
+- **LLM**: OpenAI GPT-4o-mini (회의 중 안건당 1회 + 회의 후 2회)
 
 자세한 내용은 [docs/01-아키텍처.md](docs/01-아키텍처.md), [docs/10-AWS-인프라-제약.md](docs/10-AWS-인프라-제약.md) 참고.
 

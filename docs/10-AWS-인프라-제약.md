@@ -29,7 +29,7 @@
 | **EKS / MSK** | EC2 위 `docker compose`로 NestJS 운영. 큐가 필요하면 SQS |
 | **Grafana / Prometheus** | EC2 stdout → CloudWatch Logs |
 | **GitHub Actions Access Key 기반 배포** | **수동 배포**: `git pull && docker compose up -d --build`. IAM Role이 필요하면 EC2 인스턴스 프로필 사용 |
-| **Bedrock Fine tuning / Provisioned Throughput** | 사용 안 함. OpenAI GPT-4o-mini On-demand로 충분 (회의당 2회 이내) |
+| **Bedrock Fine tuning / Provisioned Throughput** | 사용 안 함. OpenAI GPT-4o-mini On-demand로 충분 (회의당 안건 수 + 2회 수준) |
 
 ## 운영 규칙
 
@@ -107,7 +107,9 @@
 
 - EC2 t3.small: 프리티어 외 — 활동 프로그램 크레딧 사용
 - RDS db.t3.micro 프리티어: 첫 12개월 750시간 무료
-- 외부 OpenAI 비용: 회의당 GPT-4o-mini 2회 호출 × $0.0001 수준 (별도 결제)
+- 외부 OpenAI 비용: 회의당 GPT-4o-mini 호출 = 안건 수(안건별 요약) + 2회(회의 후 종합 정리·다음 회의 아젠다 생성). 안건 5개 가정 시 ~7회
+  - `o200k_base` 토크나이저 측정 기준 회의당 약 **6,000~13,000토큰**, 비용 **약 $0.0015~0.0024** (별도 결제)
+  - 기존 2회 호출 방식 대비 토큰 약 2.2~2.5배 — 측정 상세: [progress/2026-05-21-LLM-토큰-측정.md](../progress/2026-05-21-LLM-토큰-측정.md)
 
 ## 참고
 

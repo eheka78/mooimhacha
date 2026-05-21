@@ -1011,6 +1011,28 @@ textarea.input { resize: none; }
   margin-top: 6px; font-size: 10.5px; font-weight: 700;
 }
 .wag-over { margin-left: auto; font-weight: 800; }
+/* 완료 안건 요약 (요청 시 표시) */
+.wag-sum-btn {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+  font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border-2); background: var(--surface);
+  color: var(--text-soft); cursor: pointer;
+  transition: border-color .14s ease, color .14s ease;
+}
+.wag-sum-btn:hover { border-color: var(--green); color: var(--green); }
+.wag-sum-btn .ti { font-size: 11px; }
+.wag-sum-btn .chev { transition: transform .2s ease; }
+.wag.sum-open { flex-wrap: wrap; opacity: 1; }
+.wag.sum-open .wag-sum-btn { border-color: var(--green); color: var(--green); }
+.wag.sum-open .wag-sum-btn .chev { transform: rotate(180deg); }
+.wag-sum {
+  flex: 0 0 100%; display: none; margin-top: 8px;
+  padding: 9px 10px; border-radius: 9px;
+  background: var(--green-soft); border: 1px dashed rgba(29,158,117,.4);
+  font-size: 11.5px; font-weight: 600; line-height: 1.55;
+}
+.wag-sum .ti { color: var(--green); }
+.wag.sum-open .wag-sum { display: block; animation: fadeUp .25s ease both; }
 
 /* 기여도 바 */
 .w-axis-tabs {
@@ -1856,6 +1878,12 @@ textarea.input { resize: none; }
         <span class="wag-ic"><i class="ti ti-check"></i></span>
         <span class="wag-text">슬라이드 구성 검토</span>
         <span class="wag-tag" style="background:var(--green-soft);color:var(--green);">완료</span>
+        <button class="wag-sum-btn" onclick="this.closest('.wag').classList.toggle('sum-open')">
+          <i class="ti ti-sparkles"></i> 요약 보기 <i class="ti ti-chevron-down chev"></i>
+        </button>
+        <div class="wag-sum">
+          <i class="ti ti-sparkles"></i> 발표 슬라이드 14장 구성안을 검토해 도입부 2장을 1장으로 축소하기로 함. 데이터 시각화 페이지는 김민준이 보강하기로 결정.
+        </div>
       </div>
       <div class="wag cur">
         <span class="wag-ic"><i class="ti ti-player-play-filled" style="font-size:9px;"></i></span>

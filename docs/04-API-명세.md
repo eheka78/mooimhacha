@@ -29,8 +29,9 @@ GET    /api/meetings/:id/agendas
 POST   /api/meetings/:id/agendas
 PATCH  /api/agendas/:id
 DELETE /api/agendas/:id
-POST   /api/meetings/:id/agendas/generate   # LLM 아젠다 생성
+POST   /api/meetings/:id/agendas/generate   # LLM 아젠다 생성 (직전 회의 종합 결과 기반)
 POST   /api/agendas/:id/activate
+POST   /api/agendas/:id/summarize           # LLM 안건 요약 (안건 완료 시)
 ```
 
 ### 발화·기여도
@@ -49,7 +50,7 @@ GET    /api/action-items
 POST   /api/action-items
 PATCH  /api/action-items/:id
 DELETE /api/action-items/:id
-POST   /api/meetings/:id/extract-additional   # LLM 누락 항목 추출
+POST   /api/meetings/:id/summarize            # LLM 회의 종합 정리 (요약·누락 결정·태스크)
 POST   /api/meetings/:id/confirm              # 회의 산출물 확정
 ```
 
@@ -62,6 +63,7 @@ POST   /api/meetings/:id/confirm              # 회의 산출물 확정
 | `utterance:new` | client → server | 확정 발화(텍스트) 전송 |
 | `contribution:update` | server → client | 기여도 갱신 (0.5초 디바운스) |
 | `agenda:status-change` | 양방향 | 안건 상태 변경 broadcast |
+| `agenda:summary` | server → client | 완료 안건의 LLM 요약 도착 broadcast |
 | `decision:new` / `action:new` | 양방향 | 결정·액션 추가 broadcast |
 | `user:speaking-start` / `speaking-end` | 양방향 | 발화 중 🎤 표시 |
 
