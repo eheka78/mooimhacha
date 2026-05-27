@@ -17,6 +17,7 @@ export default function LoginPage() {
           style={{ width: 180, height: 180, bottom: 40, left: -70 }}
         />
 
+        {/* .reveal + animationDelay: global.css @keyframes fadeUp로 순차적 등장 효과 */}
         <div className="reveal" style={{ animationDelay: ".05s" }}>
           <div className="ll-logo">
             무임<em>하차</em>
@@ -82,6 +83,7 @@ export default function LoginPage() {
         <div className="lr-greet reveal" style={{ animationDelay: ".16s" }}>
           카카오 계정으로 간편하게 시작하세요.
         </div>
+        {/* 카카오 OAuth 미구현. 클릭 시 임시로 /home으로 이동. */}
         <button
           className="kakao-btn reveal"
           style={{ animationDelay: ".22s" }}

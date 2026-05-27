@@ -93,6 +93,8 @@ const SESSIONS = [
   },
 ];
 
+// SVG를 innerHTML로 직접 생성. 외부 차트 라이브러리 없이 의존성 최소화를 위한 선택.
+// getComputedStyle로 CSS 변수를 읽어 다크모드 색상을 SVG에 반영.
 function drawRadar(svgEl: SVGSVGElement) {
   const cx = 120,
     cy = 120,
@@ -142,6 +144,7 @@ function drawRadar(svgEl: SVGSVGElement) {
 export default function ReportPage() {
   const { showToast } = useToast();
 
+  // 마운트 후 DOM 접근이 필요하므로 effect에서 호출
   useEffect(() => {
     const el = document.getElementById("radar") as SVGSVGElement | null;
     if (el) drawRadar(el);

@@ -32,15 +32,19 @@ type Tab = "agenda" | "speak" | "decision" | "summary";
 export default function MeetingPage() {
   const { showToast } = useToast();
   const [tab, setTab] = useState<Tab>("agenda");
+  // elapsed: 초 단위 정수. fmt()로 MM:SS 포맷 변환.
   const [elapsed, setElapsed] = useState(24 * 60 + 17);
   const [decisions, setDecisions] = useState([
     "슬라이드 총 12장, 민준이 최종 편집 담당",
     "발표 순서: 서연(서론) → 민준(본론) → 유나(결론)",
   ]);
   const [decInput, setDecInput] = useState("");
+  // 세 모달을 하나의 state로 관리. null이면 모두 닫힘.
   const [modalOpen, setModalOpen] = useState<
     "meeting" | "decision" | "agenda" | null
   >(null);
+  // 발언 탭 최초 진입 시 바 애니메이션을 한 번만 실행하기 위한 플래그.
+  // state 대신 ref를 쓰는 이유: 값 변경이 리렌더를 유발할 필요 없음.
   const barsAnimated = useRef(false);
 
   useEffect(() => {
@@ -77,6 +81,7 @@ export default function MeetingPage() {
     showToast("결정 사항이 추가되었습니다");
   }
 
+  // status → CSS 클래스/레이블 매핑. as const로 유니온 키 타입 접근 보장.
   const spillCls = {
     live: "spill-live",
     soon: "spill-soon",

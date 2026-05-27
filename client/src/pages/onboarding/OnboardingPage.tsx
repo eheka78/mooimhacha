@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/useToast";
 
+// 컴포넌트 외부에 선언: useState 초기값 함수로 전달되어 최초 렌더에만 실행됨.
+// 안에 선언하면 리렌더마다 함수 참조가 재생성되어 불필요한 오버헤드 발생.
 function genCode() {
   const c = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   let s = "";
@@ -14,6 +16,8 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [step, setStep] = useState(0);
+  // useState(genCode): 함수 레퍼런스를 전달해 초기 렌더에만 실행.
+  // useState(genCode()): 호출하면 렌더마다 실행되어 코드가 바뀜.
   const [code] = useState(genCode);
   const [selectedChip, setSelectedChip] = useState("");
 
@@ -43,6 +47,7 @@ export default function OnboardingPage() {
         position: "relative",
       }}
     >
+      {/* step > 0이면 이전 스텝으로, step === 0이면 /home으로 */}
       <button
         className="ob-back"
         onClick={() => (step > 0 ? setStep((s) => s - 1) : navigate("/home"))}

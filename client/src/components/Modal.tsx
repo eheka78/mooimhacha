@@ -16,6 +16,8 @@ export default function Modal({
   return (
     <div
       className="modal-bg open"
+      // e.target === e.currentTarget: 배경(.modal-bg)을 직접 클릭했을 때만 닫힘.
+      // 모달 내부 클릭이 배경까지 버블링되어도 닫히지 않도록 함.
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="modal">

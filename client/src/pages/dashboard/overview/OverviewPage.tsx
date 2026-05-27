@@ -36,6 +36,8 @@ const CONTRIB = [
 export default function OverviewPage() {
   const navigate = useNavigate();
 
+  // requestAnimationFrame으로 지연 적용: 마운트 직후 0% → data-w% 로 CSS transition 애니메이션.
+  // 동기 적용하면 브라우저가 초기값과 최종값을 합쳐 렌더링해 transition이 발동하지 않음.
   useEffect(() => {
     requestAnimationFrame(() => {
       document
@@ -120,7 +122,8 @@ export default function OverviewPage() {
           </div>
         </Card>
 
-        {/* 진행 중 회의 */}
+        {/* 진행 중 회의: .mini-meeting 전용 레이아웃이라 Card 컴포넌트 미사용.
+            card-head/card-title 클래스는 헤더 스타일만 재사용. */}
         <div className="mini-meeting">
           <div className="card-head" style={{ padding: "0 0 10px" }}>
             <span className="card-title">

@@ -1,3 +1,5 @@
+// 대시보드 셸: 사이드바 + 중첩 라우터. 서브페이지(overview/meeting/tasks/report)를 담는 레이아웃.
+// dashboard.css 하나가 모든 서브페이지 스타일을 커버하므로 서브페이지에서 별도 import 불필요.
 import {
   Routes,
   Route,
@@ -41,6 +43,7 @@ const NAV = [
   },
 ];
 
+// NAV의 label과 별도로 관리: 헤더 타이틀은 아이콘·badge 없이 문자열만 필요하기 때문
 const TITLE: Record<string, string> = {
   overview: "대시보드",
   meeting: "회의 관리",
@@ -51,6 +54,7 @@ const TITLE: Record<string, string> = {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  // "/dashboard/overview" → ["", "dashboard", "overview"] → index 2
   const current = pathname.split("/")[2] || "overview";
 
   return (

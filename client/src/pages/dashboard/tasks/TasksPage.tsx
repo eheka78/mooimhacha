@@ -12,6 +12,7 @@ interface Task {
   warn?: boolean;
 }
 
+// 컴포넌트 외부에 선언: 리렌더 시 참조가 변경되지 않아 useState 초기값으로 안전하게 사용 가능.
 const INIT_TASKS: Task[] = [
   {
     title: "UI 와이어프레임 작성",
@@ -51,6 +52,7 @@ const INIT_TASKS: Task[] = [
 ];
 
 const STATUS_COLS: Status[] = ["할 일", "진행 중", "완료"];
+// status → 스타일 매핑 테이블. 컴포넌트 외부에 선언해 렌더마다 재생성하지 않음.
 const COL_COLOR = {
   "할 일": "var(--text-soft)",
   "진행 중": "var(--blue)",
@@ -68,6 +70,7 @@ export default function TasksPage() {
   const done = tasks.filter((t) => t.status === "완료").length;
   const total = tasks.length;
 
+  // OverviewPage와 동일한 rAF 패턴: 진행률 바 초기 애니메이션
   useEffect(() => {
     requestAnimationFrame(() => {
       document
@@ -134,6 +137,8 @@ export default function TasksPage() {
       {view === "board" && (
         <div className="board">
           {STATUS_COLS.map((col) => {
+            // filter 전에 원본 인덱스(idx)를 붙임.
+            // filter 후에는 배열 위치가 바뀌어 changeStatus에 잘못된 인덱스가 전달됨.
             const colTasks = tasks
               .map((t, i) => ({ ...t, idx: i }))
               .filter((t) => t.status === col);
