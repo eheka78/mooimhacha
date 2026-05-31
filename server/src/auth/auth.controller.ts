@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Patch,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
@@ -21,7 +29,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '회원 정보 등록 (최초 가입 시 대학교·학과 입력)' })
-  updateProfile(@Request() req: { user: { id: number } }, @Body() dto: UpdateProfileDto) {
+  updateProfile(
+    @Request() req: { user: { id: number } },
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(req.user.id, dto);
   }
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -41,13 +45,19 @@ export class AuthService {
     const kakaoId = String(kakaoUser.id);
     const email = kakaoUser.kakao_account?.email ?? null;
     const name = kakaoUser.kakao_account?.profile?.nickname ?? '사용자';
-    const profileImageUrl = kakaoUser.kakao_account?.profile?.profile_image_url ?? null;
+    const profileImageUrl =
+      kakaoUser.kakao_account?.profile?.profile_image_url ?? null;
 
     let user = await this.userRepo.findOne({ where: { kakao_id: kakaoId } });
     const isNewUser = !user;
 
     if (!user) {
-      user = this.userRepo.create({ kakao_id: kakaoId, kakao_email: email, name, profile_image_url: profileImageUrl });
+      user = this.userRepo.create({
+        kakao_id: kakaoId,
+        kakao_email: email,
+        name,
+        profile_image_url: profileImageUrl,
+      });
       await this.userRepo.save(user);
     }
 
@@ -72,10 +82,15 @@ export class AuthService {
     user.department = dto.department;
     await this.userRepo.save(user);
 
-    return { id: user.id, name: user.name, university: user.university, department: user.department };
+    return {
+      id: user.id,
+      name: user.name,
+      university: user.university,
+      department: user.department,
+    };
   }
 
-  async refresh(refreshToken: string) {
+  refresh(refreshToken: string) {
     let payload: { sub: number; type: string };
     try {
       payload = this.jwtService.verify(refreshToken, {
@@ -97,10 +112,11 @@ export class AuthService {
     const secret = this.config.get<string>('JWT_SECRET');
     const access_token = this.jwtService.sign(
       { sub: userId },
-      { secret, expiresIn: (this.config.get('JWT_EXPIRES_IN') ?? '7d') as any },
+      { secret, expiresIn: this.config.get('JWT_EXPIRES_IN') ?? '7d' },
     );
     const refresh_token = this.jwtService.sign(
       { sub: userId, type: 'refresh' },
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       { secret, expiresIn: '30d' as any },
     );
     return { access_token, refresh_token };
@@ -122,7 +138,7 @@ export class AuthService {
     });
 
     if (!res.ok) {
-      const err = await res.json();
+      const err: unknown = await res.json();
       console.error('[Kakao token error]', err);
       throw new UnauthorizedException('카카오 토큰 발급에 실패했습니다.');
     }
@@ -136,7 +152,9 @@ export class AuthService {
     });
 
     if (!res.ok) {
-      throw new UnauthorizedException('카카오 사용자 정보 조회에 실패했습니다.');
+      throw new UnauthorizedException(
+        '카카오 사용자 정보 조회에 실패했습니다.',
+      );
     }
 
     return res.json() as Promise<KakaoUserInfo>;
