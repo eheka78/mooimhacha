@@ -489,8 +489,11 @@ export default function HomePage() {
                 <div className="ng-txt">새 그룹 만들기</div>
               </div>
             </div>
+          </div>
 
-            <div className="join-box">
+          {/* 내 태스크 + 최근 활동 */}
+          <div className="reveal" style={{ animationDelay: ".16s" }}>
+            <div className="join-box" style={{ marginBottom: 14 }}>
               <div className="join-label">
                 <i className="ti ti-key" /> 초대코드로 참가
               </div>
@@ -507,10 +510,6 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* 내 태스크 + 최근 활동 */}
-          <div className="reveal" style={{ animationDelay: ".16s" }}>
             <Card
               icon="ti ti-checklist"
               title="내 태스크"
