@@ -794,17 +794,49 @@
 .tcard.warn {
   border-left: 3px solid var(--amber);
 }
-.tcard.done-card {
-  opacity: 0.62;
+.tcard.dragging {
+  opacity: 0.35;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.board-col.drag-over {
+  outline: 2px dashed var(--green);
+  outline-offset: 4px;
+  border-radius: 14px;
+  background: var(--green-soft);
+}
+.tc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 9px;
 }
 .tc-title {
+  flex: 1;
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 600;
-  margin-bottom: 9px;
 }
 .tc-title.done {
   text-decoration: line-through;
   color: var(--text-soft);
+}
+.tc-due {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.tc-diff {
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.tc-diff-off {
+  color: var(--border-2);
 }
 .tc-foot {
   display: flex;
@@ -860,6 +892,48 @@
 .add-col:hover {
   border-color: var(--green);
   color: var(--green);
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+.chip-opt {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 13px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-2);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.chip-opt:hover {
+  border-color: var(--text-soft);
+  color: var(--text-main);
+}
+.chip-todo.active {
+  background: var(--surface-3);
+  border-color: var(--text-soft);
+  color: var(--text-main);
+}
+.chip-inprog.active {
+  background: var(--blue-soft);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.chip-done.active {
+  background: var(--green-soft);
+  border-color: var(--green);
+  color: var(--green);
+}
+.chip-diff.active {
+  background: var(--amber-soft, #fef3c7);
+  border-color: var(--amber);
+  color: var(--amber);
 }
 
 .list-view {
