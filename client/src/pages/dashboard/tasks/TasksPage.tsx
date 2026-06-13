@@ -34,24 +34,26 @@ function dueState(due: string | null): {
   warn: boolean;
   label: string;
   timeLabel: string;
+  dDay: string;
 } {
-  if (!due) return { danger: false, warn: false, label: "", timeLabel: "" };
+  if (!due)
+    return { danger: false, warn: false, label: "", timeLabel: "", dDay: "" };
   const d = new Date(due);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDay = new Date(d);
   dueDay.setHours(0, 0, 0, 0);
-  const diff = (dueDay.getTime() - today.getTime()) / 86400000;
-  const label =
-    diff < 0
-      ? "지남"
-      : diff === 0
-        ? "오늘"
-        : diff === 1
-          ? "내일"
-          : `${d.getMonth() + 1}/${d.getDate()}`;
+  const diff = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
+  const label = `${d.getMonth() + 1}/${d.getDate()}`;
   const timeLabel = fmtTime(d);
-  return { danger: diff <= 0, warn: diff >= 1 && diff <= 3, label, timeLabel };
+  const dDay = diff < 0 ? `D+${Math.abs(diff)}` : `D-${diff}`;
+  return {
+    danger: diff <= 0,
+    warn: diff >= 1 && diff <= 3,
+    label,
+    timeLabel,
+    dDay,
+  };
 }
 
 function fmtTime(d: Date): string {
@@ -463,6 +465,11 @@ export default function TasksPage() {
                                 {dd.timeLabel}
                               </span>
                             )}
+                            {dd.dDay && (
+                              <span style={{ fontWeight: 700, marginLeft: 4 }}>
+                                {dd.dDay}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -519,9 +526,19 @@ export default function TasksPage() {
                 <div
                   className={`lrow-due ${danger ? "due-red" : warn ? "due-amber" : "due-soft"}`}
                 >
-                  {dd.label
-                    ? `${dd.label}${dd.timeLabel ? ` ${dd.timeLabel}` : ""}`
-                    : "기한 없음"}
+                  {dd.label ? (
+                    <>
+                      {dd.label}
+                      {dd.timeLabel && ` ${dd.timeLabel}`}
+                      {dd.dDay && (
+                        <span style={{ fontWeight: 700, marginLeft: 5 }}>
+                          {dd.dDay}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    "기한 없음"
+                  )}
                 </div>
                 <span className="tc-diff">
                   {"★".repeat(t.difficulty ?? 1)}
