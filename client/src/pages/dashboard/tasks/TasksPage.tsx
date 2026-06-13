@@ -44,7 +44,8 @@ function dueState(due: string | null): {
   const dueDay = new Date(d);
   dueDay.setHours(0, 0, 0, 0);
   const diff = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
-  const label = `${d.getMonth() + 1}/${d.getDate()}`;
+  const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
+  const label = `${d.getMonth() + 1}/${d.getDate()}(${DAYS[d.getDay()]})`;
   const timeLabel = fmtTime(d);
   const dDay = diff < 0 ? `D+${Math.abs(diff)}` : `D-${diff}`;
   return {
