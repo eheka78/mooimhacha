@@ -14,6 +14,7 @@ import type {
   MeetingAttendance,
   AttendanceSummary,
   AttendanceStatus,
+  Transcript,
 } from "@/lib/types";
 import type { TeamContext } from "../DashboardPage";
 
@@ -69,6 +70,7 @@ export default function MeetingPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [agendas, setAgendas] = useState<Agenda[]>([]);
   const [speak, setSpeak] = useState<MeetingContribution[]>([]);
+  const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [attendance, setAttendance] = useState<MeetingAttendance | null>(null);
   const [absenceInput, setAbsenceInput] = useState("");
@@ -171,11 +173,13 @@ export default function MeetingPage() {
     if (!selectedId) {
       setAgendas([]);
       setSpeak([]);
+      setTranscript(null);
       setDecisions([]);
       return;
     }
     let alive = true;
     barsAnimated.current = false;
+    setTranscript(null);
     void Promise.allSettled([
       apiGet<Agenda[]>(`/meetings/${selectedId}/agendas`),
       apiGet<{ scores: MeetingContribution[] }>(
@@ -213,6 +217,12 @@ export default function MeetingPage() {
       void loadAttendance(selectedId);
     }
   }, [tab, selectedId, selected?.status, loadAttendance]);
+
+  useEffect(() => {
+    if (tab === "speak" && selected?.status === "ended" && selectedId && !transcript) {
+      void apiGet<Transcript>(`/meetings/${selectedId}/transcript`).then(setTranscript).catch(() => null);
+    }
+  }, [tab, selectedId, selected?.status, transcript]);
 
   // 진행 중 회의 경과 시간 — t0 기준 실측, 1초 틱
   useEffect(() => {
@@ -831,6 +841,36 @@ export default function MeetingPage() {
                         물어봐 주세요.
                       </div>
                     )}
+                    {/* 발화 기록 — 종료된 회의만 */}
+                    {selected.status === "ended" && (
+                      <>
+                        <div className="panel-label" style={{ marginTop: 18 }}>발화 기록</div>
+                        {!transcript ? (
+                          <div style={{ fontSize: 12.5, color: "var(--text-soft)" }}>불러오는 중…</div>
+                        ) : transcript.sections.every((s) => s.groups.length === 0) ? (
+                          <div className="summary-box"><i className="ti ti-info-circle" />저장된 발화 기록이 없습니다.</div>
+                        ) : (
+                          transcript.sections.filter((s) => s.groups.length > 0).map((section) => (
+                            <div key={section.agenda_id} className="utt-section">
+                              <div className="utt-section-title">{section.title}</div>
+                              {section.groups.map((g, gi) => {
+                                const speaker = speak.find((s) => s.user_id === g.user_id);
+                                const idx = speak.findIndex((s) => s.user_id === g.user_id);
+                                return (
+                                  <div key={gi} className="utt-row">
+                                    <div className={`av a${(idx % 4) + 1} av-sm`}>{(speaker?.name ?? "?")[0]}</div>
+                                    <div className="utt-body">
+                                      <span className="utt-name">{speaker?.name ?? `사용자 ${g.user_id}`}<span className="utt-time">{fmt(Math.floor(g.started_at_offset_ms / 1000))}</span></span>
+                                      <span className="utt-text">{g.text}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -932,7 +972,10 @@ export default function MeetingPage() {
 
                 {/* 결정 사항 */}
                 {tab === "decision" && (
-                  <div className="tab-panel active">
+                  <div
+                    className="tab-panel active"
+                    style={{ overflow: "hidden" }}
+                  >
                     <div
                       className="panel-label"
                       style={{ display: "flex", alignItems: "center" }}
@@ -950,41 +993,43 @@ export default function MeetingPage() {
                         <i className="ti ti-plus" /> 추가
                       </button>
                     </div>
-                    {decisions.length === 0 && (
-                      <div
-                        style={{ fontSize: 12.5, color: "var(--text-soft)" }}
-                      >
-                        아직 기록된 결정이 없습니다.
-                      </div>
-                    )}
-                    {decisions.map((d) => (
-                      <div key={d.id} className="dec-item">
-                        <div className="dec-ic">
-                          <i className="ti ti-check" />
+                    <div className="dec-list scroll">
+                      {decisions.length === 0 && (
+                        <div
+                          style={{ fontSize: 12.5, color: "var(--text-soft)" }}
+                        >
+                          아직 기록된 결정이 없습니다.
                         </div>
-                        <div className="dec-text">{d.content}</div>
-                        <div className="dec-actions">
-                          <button
-                            className="dec-act"
-                            aria-label="결정 수정"
-                            onClick={() => {
-                              setEditingDecision(d);
-                              setDecInput(d.content);
-                              setModalOpen("decision");
-                            }}
-                          >
-                            <i className="ti ti-pencil" />
-                          </button>
-                          <button
-                            className="dec-act dec-act--danger"
-                            aria-label="결정 삭제"
-                            onClick={() => setDeletingDecision(d)}
-                          >
-                            <i className="ti ti-trash" />
-                          </button>
+                      )}
+                      {decisions.map((d) => (
+                        <div key={d.id} className="dec-item">
+                          <div className="dec-ic">
+                            <i className="ti ti-check" />
+                          </div>
+                          <div className="dec-text">{d.content}</div>
+                          <div className="dec-actions">
+                            <button
+                              className="dec-act"
+                              aria-label="결정 수정"
+                              onClick={() => {
+                                setEditingDecision(d);
+                                setDecInput(d.content);
+                                setModalOpen("decision");
+                              }}
+                            >
+                              <i className="ti ti-pencil" />
+                            </button>
+                            <button
+                              className="dec-act dec-act--danger"
+                              aria-label="결정 삭제"
+                              onClick={() => setDeletingDecision(d)}
+                            >
+                              <i className="ti ti-trash" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
 
