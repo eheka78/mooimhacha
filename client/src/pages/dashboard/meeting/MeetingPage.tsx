@@ -52,14 +52,15 @@ function meetingMeta(m: Meeting, memberCount: number): string {
     minute: "2-digit",
   });
   if (m.status === "ended" && m.t0_timestamp && m.ended_at) {
-    const mins = Math.max(
-      1,
-      Math.round(
-        (new Date(m.ended_at).getTime() - new Date(m.t0_timestamp).getTime()) /
-          60000,
-      ),
-    );
-    return `${day} · ${mins}분`;
+    const start = new Date(m.t0_timestamp);
+    const end = new Date(m.ended_at);
+    const fmt = (d: Date) =>
+      `${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+    const sameDay = start.toDateString() === end.toDateString();
+    const endStr = sameDay
+      ? end.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+      : fmt(end);
+    return `${fmt(start)} ~ ${endStr}`;
   }
   return `${day} ${time} · ${memberCount}명`;
 }
@@ -933,11 +934,23 @@ export default function MeetingPage() {
                                           {speaker?.name ??
                                             `사용자 ${g.user_id}`}
                                           <span className="utt-time">
-                                            {fmt(
-                                              Math.floor(
-                                                g.started_at_offset_ms / 1000,
-                                              ),
-                                            )}
+                                            {selected.t0_timestamp
+                                              ? new Date(
+                                                  new Date(
+                                                    selected.t0_timestamp,
+                                                  ).getTime() +
+                                                    g.started_at_offset_ms,
+                                                ).toLocaleTimeString("ko-KR", {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                  second: "2-digit",
+                                                })
+                                              : fmt(
+                                                  Math.floor(
+                                                    g.started_at_offset_ms /
+                                                      1000,
+                                                  ),
+                                                )}
                                           </span>
                                         </span>
                                         <span className="utt-text">
