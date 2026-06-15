@@ -71,6 +71,7 @@ export default function MeetingRoom({ meetingId, teamId }: Props) {
   const [speakingSelf, setSpeakingSelf] = useState(false);
   const [partialText, setPartialText] = useState("");
   const [myUserId, setMyUserId] = useState<number | null>(null);
+  const [recentCollapsed, setRecentCollapsed] = useState(true);
 
   const socketRef = useRef<Socket | null>(null);
   const engineRef = useRef<SttEngine | null>(null);
@@ -720,26 +721,44 @@ export default function MeetingRoom({ meetingId, teamId }: Props) {
       />
 
       <section className="cmp-section cmp-recent">
-        <header className="cmp-section__head">
+        <header
+          className="cmp-section__head"
+          style={{ justifyContent: "space-between" }}
+        >
           <h2>최근 항목</h2>
+          <button
+            onClick={() => setRecentCollapsed((c) => !c)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 11,
+              color: "var(--text-soft)",
+              padding: "0 2px",
+            }}
+          >
+            {recentCollapsed ? "▼ 펼치기" : "▲ 접기"}
+          </button>
         </header>
-        <ul className="cmp-recent-list">
-          {recentDecisions.map((d) => (
-            <li key={`d${d.id}`}>
-              <span className="cmp-tag cmp-tag--decision">결정</span>
-              {d.content}
-            </li>
-          ))}
-          {recentActions.map((a) => (
-            <li key={`a${a.id}`}>
-              <span className="cmp-tag cmp-tag--action">액션</span>
-              {a.description}
-            </li>
-          ))}
-          {recentDecisions.length === 0 && recentActions.length === 0 && (
-            <li className="cmp-empty">기록된 항목이 없습니다.</li>
-          )}
-        </ul>
+        {!recentCollapsed && (
+          <ul className="cmp-recent-list">
+            {recentDecisions.map((d) => (
+              <li key={`d${d.id}`}>
+                <span className="cmp-tag cmp-tag--decision">결정</span>
+                {d.content}
+              </li>
+            ))}
+            {recentActions.map((a) => (
+              <li key={`a${a.id}`}>
+                <span className="cmp-tag cmp-tag--action">액션</span>
+                {a.description}
+              </li>
+            ))}
+            {recentDecisions.length === 0 && recentActions.length === 0 && (
+              <li className="cmp-empty">기록된 항목이 없습니다.</li>
+            )}
+          </ul>
+        )}
       </section>
     </div>
   );
