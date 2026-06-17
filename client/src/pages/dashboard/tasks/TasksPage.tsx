@@ -272,7 +272,9 @@ export default function TasksPage() {
           }}
         >
           <i className="ti ti-calendar-plus" />
-          {ext?.status === "rejected" ? "연장 거절됨 · 재요청" : "기한 연장 요청"}
+          {ext?.status === "rejected"
+            ? "연장 거절됨 · 재요청"
+            : "기한 연장 요청"}
         </button>
       );
     }
@@ -332,6 +334,9 @@ export default function TasksPage() {
         });
     });
   }, [done, total]);
+
+  const canEdit = (t: ActionItem) =>
+    !t.assignee_id || t.assignee_id === currentUser?.id;
 
   function openEdit(task: ActionItem) {
     setEditTarget(task);
@@ -527,7 +532,11 @@ export default function TasksPage() {
                   setDraggingId(null);
                   const id = Number(e.dataTransfer.getData("taskId"));
                   const task = tasks.find((t) => t.id === id);
-                  if (task && API_TO_STATUS[task.status] !== col) {
+                  if (
+                    task &&
+                    canEdit(task) &&
+                    API_TO_STATUS[task.status] !== col
+                  ) {
                     void changeStatus(task, col);
                   }
                 }}
@@ -561,19 +570,24 @@ export default function TasksPage() {
                   return (
                     <div
                       key={t.id}
-                      draggable
+                      draggable={canEdit(t)}
                       className={`tcard ${danger ? "danger" : ""} ${warn ? "warn" : ""} ${status === "완료" ? "done-card" : ""} ${draggingId === t.id ? "dragging" : ""}`}
                       style={{
-                        cursor: draggingId === t.id ? "grabbing" : "grab",
+                        cursor: canEdit(t)
+                          ? draggingId === t.id
+                            ? "grabbing"
+                            : "grab"
+                          : "default",
                         ...stripeStyle(t.assignee_id, danger, warn),
                       }}
                       onDragStart={(e) => {
+                        if (!canEdit(t)) return;
                         setDraggingId(t.id);
                         e.dataTransfer.setData("taskId", String(t.id));
                         e.dataTransfer.effectAllowed = "move";
                       }}
                       onDragEnd={() => setDraggingId(null)}
-                      onClick={() => openEdit(t)}
+                      onClick={() => canEdit(t) && openEdit(t)}
                     >
                       <div className="tc-head">
                         <div
@@ -647,58 +661,58 @@ export default function TasksPage() {
             const warn = status !== "완료" && dd.warn;
             return (
               <div key={t.id} className="lrow-wrap">
-              <div
-                className={`lrow ${danger ? "danger" : ""} ${warn ? "warn" : ""}`}
-                style={{
-                  cursor: "pointer",
-                  ...stripeStyle(t.assignee_id, danger, warn),
-                }}
-                onClick={() => openEdit(t)}
-              >
                 <div
-                  className={`t-check ${status === "완료" ? "done" : ""}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleList(t);
+                  className={`lrow ${danger ? "danger" : ""} ${warn ? "warn" : ""}`}
+                  style={{
+                    cursor: canEdit(t) ? "pointer" : "default",
+                    ...stripeStyle(t.assignee_id, danger, warn),
                   }}
+                  onClick={() => canEdit(t) && openEdit(t)}
                 >
-                  <i className="ti ti-check" />
-                </div>
-                <div
-                  className={`lrow-title ${status === "완료" ? "done" : ""}`}
-                >
-                  {t.description}
-                </div>
-                <span className={`badge ${COL_BADGE[status] || "b-gray"}`}>
-                  {status}
-                </span>
-                <div className={`av ${avOf(t.assignee_id)} av-sm`}>
-                  {nameOf(t.assignee_id)[0]}
-                </div>
-                <div
-                  className={`lrow-due ${danger ? "due-red" : warn ? "due-amber" : "due-soft"}`}
-                >
-                  {dd.label ? (
-                    <>
-                      {dd.label}
-                      {dd.timeLabel && ` ${dd.timeLabel}`}
-                      {dd.dDay && (
-                        <span style={{ fontWeight: 700, marginLeft: 5 }}>
-                          {dd.dDay}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    "기한 없음"
-                  )}
-                </div>
-                <span className="tc-diff">
-                  {"★".repeat(t.difficulty ?? 1)}
-                  <span className="tc-diff-off">
-                    {"★".repeat(3 - (t.difficulty ?? 1))}
+                  <div
+                    className={`t-check ${status === "완료" ? "done" : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (canEdit(t)) toggleList(t);
+                    }}
+                  >
+                    <i className="ti ti-check" />
+                  </div>
+                  <div
+                    className={`lrow-title ${status === "완료" ? "done" : ""}`}
+                  >
+                    {t.description}
+                  </div>
+                  <span className={`badge ${COL_BADGE[status] || "b-gray"}`}>
+                    {status}
                   </span>
-                </span>
-              </div>
+                  <div className={`av ${avOf(t.assignee_id)} av-sm`}>
+                    {nameOf(t.assignee_id)[0]}
+                  </div>
+                  <div
+                    className={`lrow-due ${danger ? "due-red" : warn ? "due-amber" : "due-soft"}`}
+                  >
+                    {dd.label ? (
+                      <>
+                        {dd.label}
+                        {dd.timeLabel && ` ${dd.timeLabel}`}
+                        {dd.dDay && (
+                          <span style={{ fontWeight: 700, marginLeft: 5 }}>
+                            {dd.dDay}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      "기한 없음"
+                    )}
+                  </div>
+                  <span className="tc-diff">
+                    {"★".repeat(t.difficulty ?? 1)}
+                    <span className="tc-diff-off">
+                      {"★".repeat(3 - (t.difficulty ?? 1))}
+                    </span>
+                  </span>
+                </div>
                 {renderExtension(t)}
               </div>
             );
@@ -962,9 +976,7 @@ export default function TasksPage() {
             </>
           }
         >
-          <div className="modal-sub">
-            팀장이 수락하면 기한이 변경됩니다.
-          </div>
+          <div className="modal-sub">팀장이 수락하면 기한이 변경됩니다.</div>
           <div className="field">
             <label className="field-label">희망 기한</label>
             <input
