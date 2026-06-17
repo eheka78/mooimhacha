@@ -119,6 +119,10 @@ export default function TasksPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [statusChangePending, setStatusChangePending] = useState<{
+    task: ActionItem;
+    newStatus: Status;
+  } | null>(null);
 
   // 드래그 앤 드롭
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -424,8 +428,16 @@ export default function TasksPage() {
     }
   }
 
+  function requestStatusChange(task: ActionItem, newStatus: Status) {
+    if (task.status === "done") {
+      setStatusChangePending({ task, newStatus });
+    } else {
+      void changeStatus(task, newStatus);
+    }
+  }
+
   function toggleList(task: ActionItem) {
-    void changeStatus(task, task.status === "done" ? "할 일" : "완료");
+    requestStatusChange(task, task.status === "done" ? "할 일" : "완료");
   }
 
   async function addTask() {
@@ -543,7 +555,7 @@ export default function TasksPage() {
                     canEdit(task) &&
                     API_TO_STATUS[task.status] !== col
                   ) {
-                    void changeStatus(task, col);
+                    requestStatusChange(task, col);
                   }
                 }}
               >
@@ -1000,6 +1012,66 @@ export default function TasksPage() {
           busy={deleting}
           onConfirm={() => void deleteTask()}
           onClose={() => setConfirmDelete(false)}
+        />
+      )}
+
+      {/* 완료 → 다른 상태 변경 경고 모달 */}
+      {statusChangePending && (
+        <ConfirmModal
+          title="완료 상태 변경"
+          message={
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 14,
+                textAlign: "center",
+                padding: "4px 0 8px",
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "rgba(240,193,79,.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <i
+                  className="ti ti-alert-triangle"
+                  style={{ fontSize: 26, color: "var(--amber, #b8860b)" }}
+                />
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: "var(--text-main)",
+                }}
+              >
+                완료 처리된 태스크를{" "}
+                <strong>{statusChangePending.newStatus}</strong>으로 변경하면
+                <br />
+                <strong style={{ color: "var(--amber, #b8860b)" }}>
+                  완료 날짜가 초기화
+                </strong>
+                됩니다.
+              </div>
+            </div>
+          }
+          confirmLabel="변경"
+          onConfirm={() => {
+            void changeStatus(
+              statusChangePending.task,
+              statusChangePending.newStatus,
+            );
+            setStatusChangePending(null);
+          }}
+          onClose={() => setStatusChangePending(null)}
         />
       )}
 
