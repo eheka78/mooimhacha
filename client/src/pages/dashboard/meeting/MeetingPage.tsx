@@ -297,6 +297,9 @@ export default function MeetingPage() {
 
   useEffect(() => {
     setAttendance(null);
+    if (selectedId && selected?.status === "active") {
+      void loadAttendance(selectedId);
+    }
     if (tab === "attendance" && selected?.status === "ended" && selectedId) {
       void loadAttendance(selectedId);
       if (!teamSettings && team) {
@@ -805,7 +808,13 @@ export default function MeetingPage() {
                     <i className="ti ti-calendar" /> {headMeta}
                   </span>
                   <span>
-                    <i className="ti ti-users" /> {team?.member_count ?? "-"}명
+                    <i className="ti ti-users" />{" "}
+                    {selected?.status === "scheduled"
+                      ? "0"
+                      : (attendance?.members.filter(
+                          (m) => m.status === "present" || m.status === "late",
+                        ).length ?? "-")}
+                    명
                   </span>
                   {selected.status === "active" && (
                     <span style={{ color: "var(--coral)", fontWeight: 700 }}>
