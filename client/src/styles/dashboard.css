@@ -172,6 +172,14 @@
   padding: 1px 6px;
   border-radius: 5px;
 }
+.leader-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  background: rgba(240, 193, 79, 0.18);
+  color: #b8860b;
+  padding: 1px 6px;
+  border-radius: 5px;
+}
 .sb-spacer {
   flex: 1;
 }
