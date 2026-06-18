@@ -726,8 +726,8 @@ export default function MeetingPage() {
     [meetings],
   );
 
-  // 발언 경고: 비중 10% 미만 멤버
-  const lowSpeaker = speak.find(
+  // 발언 경고: 비중 10% 미만 멤버 (전체)
+  const lowSpeakers = speak.filter(
     (s) => s.speech_ratio != null && s.speech_ratio < 0.1,
   );
   return (
@@ -1093,7 +1093,7 @@ export default function MeetingPage() {
                         </div>
                       );
                     })}
-                    {lowSpeaker && (
+                    {lowSpeakers.length > 0 && (
                       <div
                         className="summary-box"
                         style={{
@@ -1106,8 +1106,8 @@ export default function MeetingPage() {
                           className="ti ti-alert-triangle"
                           style={{ color: "var(--coral)" }}
                         />
-                        {lowSpeaker.name}님의 발언 비중이 10% 미만입니다. 의견을
-                        물어봐 주세요.
+                        {lowSpeakers.map((s) => s.name).join(", ")}님의 발언
+                        비중이 10% 미만입니다. 의견을 물어봐 주세요.
                       </div>
                     )}
                     {/* 발화 기록 — 종료된 회의만 */}
