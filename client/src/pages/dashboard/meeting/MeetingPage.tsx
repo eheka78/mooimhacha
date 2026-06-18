@@ -75,12 +75,16 @@ function meetingMeta(
     const end = new Date(m.ended_at);
     const timeFmt = (t: Date) =>
       t.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    const startDay =
+      start.toDateString() === today.toDateString()
+        ? "오늘"
+        : `${start.getMonth() + 1}월 ${start.getDate()}일`;
     const sameDay = start.toDateString() === end.toDateString();
     const endStr = sameDay
       ? timeFmt(end)
       : `${end.getMonth() + 1}/${end.getDate()} ${timeFmt(end)}`;
     const countStr = attendedCount !== undefined ? ` · ${attendedCount}명` : "";
-    return `${day} · ${timeFmt(start)} ~ ${endStr}${countStr}`;
+    return `${startDay} · ${timeFmt(start)} ~ ${endStr}${countStr}`;
   }
   return `${day} · ${memberCount}명`;
 }
@@ -726,14 +730,6 @@ export default function MeetingPage() {
   const lowSpeaker = speak.find(
     (s) => s.speech_ratio != null && s.speech_ratio < 0.1,
   );
-  const headMeta = selected
-    ? meetingMeta(
-        selected,
-        team?.member_count ?? 0,
-        summaries.get(selected.id)?.attended_count,
-      )
-    : "";
-
   return (
     <>
       <div className="meeting-layout">
@@ -857,8 +853,57 @@ export default function MeetingPage() {
                   )}
                 </div>
                 <div className="mdh-meta">
-                  <span>
-                    <i className="ti ti-calendar" /> {headMeta}
+                  <span
+                    style={{
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      gap: 3,
+                    }}
+                  >
+                    <span>
+                      <i className="ti ti-calendar" />{" "}
+                      {(() => {
+                        const d = new Date(selected.scheduled_at);
+                        const today = new Date();
+                        const day =
+                          d.toDateString() === today.toDateString()
+                            ? "오늘"
+                            : `${d.getMonth() + 1}월 ${d.getDate()}일`;
+                        const t = d.toLocaleTimeString("ko-KR", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        });
+                        return `${day} ${t} 예정`;
+                      })()}
+                    </span>
+                    {selected.status === "ended" &&
+                      selected.t0_timestamp &&
+                      selected.ended_at && (
+                        <span>
+                          {(() => {
+                            const tf = (d: Date) =>
+                              d.toLocaleTimeString("ko-KR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              });
+                            const s = new Date(selected.t0_timestamp!);
+                            const e = new Date(selected.ended_at!);
+                            const today = new Date();
+                            const day =
+                              s.toDateString() === today.toDateString()
+                                ? "오늘"
+                                : `${s.getMonth() + 1}월 ${s.getDate()}일`;
+                            const min = Math.round(
+                              (e.getTime() - s.getTime()) / 60000,
+                            );
+                            const dur =
+                              min >= 60
+                                ? `${Math.floor(min / 60)}시간${min % 60 ? ` ${min % 60}분` : ""}`
+                                : `${min}분`;
+                            return `${day} ${tf(s)} ~ ${tf(e)} (${dur})`;
+                          })()}
+                        </span>
+                      )}
                   </span>
                   {selected.status !== "ended" && (
                     <span>
