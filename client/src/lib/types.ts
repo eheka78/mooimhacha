@@ -27,6 +27,7 @@ export interface Meeting {
   t0_timestamp: string | null;
   ended_at: string | null;
   meeting_type: string;
+  one_liner?: string | null;
   summary?: string | null;
 }
 

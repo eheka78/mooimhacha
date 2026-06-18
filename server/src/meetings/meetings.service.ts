@@ -617,6 +617,7 @@ export class MeetingsService {
       };
     }
 
+    meeting.one_liner = result.one_liner;
     meeting.summary = result.summary;
     await this.meetingRepo.save(meeting);
 

@@ -1525,6 +1525,11 @@ export default function MeetingPage() {
                                   : "요약 생성"}
                             </button>
                           </div>
+                          {selected.one_liner && (
+                            <div className="summary-one-liner">
+                              {selected.one_liner}
+                            </div>
+                          )}
                           {selected.summary ? (
                             <div className="summary-md">
                               <ReactMarkdown>{selected.summary}</ReactMarkdown>
