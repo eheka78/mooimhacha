@@ -1,6 +1,7 @@
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,6 +12,12 @@ import {
 } from 'class-validator';
 
 export class CreateExtensionDto {
+  @ApiPropertyOptional({ description: 'change | delete (기본값 change)' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['change', 'delete'])
+  type?: 'change' | 'delete';
+
   @ApiPropertyOptional({ description: '새 마감일 (ISO datetime)' })
   @IsOptional()
   @IsDateString()

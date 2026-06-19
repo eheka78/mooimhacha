@@ -35,18 +35,26 @@ export class TaskExtensionsService {
     if (!action) throw new NotFoundException('태스크를 찾을 수 없습니다.');
     await this.teamsService.requireMembership(userId, action.team_id);
 
-    if (action.status !== 'todo' && action.status !== 'in_progress') {
+    const type = dto.type ?? 'change';
+
+    if (
+      type === 'change' &&
+      action.status !== 'todo' &&
+      action.status !== 'in_progress'
+    ) {
       throw new BadRequestException(
         '진행 중인 태스크만 수정을 요청할 수 있습니다.',
       );
     }
 
-    const hasChange =
-      dto.requested_due_date !== undefined ||
-      dto.requested_description !== undefined ||
-      dto.requested_difficulty !== undefined ||
-      dto.requested_assignee_id !== undefined;
-    if (!hasChange) throw new BadRequestException('변경할 항목이 없습니다.');
+    if (type === 'change') {
+      const hasChange =
+        dto.requested_due_date !== undefined ||
+        dto.requested_description !== undefined ||
+        dto.requested_difficulty !== undefined ||
+        dto.requested_assignee_id !== undefined;
+      if (!hasChange) throw new BadRequestException('변경할 항목이 없습니다.');
+    }
 
     const existing = await this.extRepo.findOne({
       where: { action_item_id: actionItemId, status: 'pending' },
@@ -55,6 +63,7 @@ export class TaskExtensionsService {
     const payload = {
       action_item_id: actionItemId,
       requester_id: userId,
+      type,
       requested_due_date: dto.requested_due_date
         ? new Date(dto.requested_due_date)
         : null,
@@ -111,6 +120,7 @@ export class TaskExtensionsService {
         requested_description: e.requested_description,
         requested_difficulty: e.requested_difficulty,
         requested_assignee_id: e.requested_assignee_id,
+        type: e.type,
         reason: e.reason,
         status: e.status,
         created_at: e.created_at.toISOString(),
@@ -125,6 +135,13 @@ export class TaskExtensionsService {
       extensionId,
     );
     if (!ext || !action) return { status: 'closed' };
+
+    if (ext.type === 'delete') {
+      await this.actionRepo.remove(action);
+      ext.status = 'approved';
+      await this.extRepo.save(ext);
+      return { status: 'approved' };
+    }
 
     if (ext.requested_due_date !== null)
       action.due_date = ext.requested_due_date;

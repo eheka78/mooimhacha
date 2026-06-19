@@ -4,7 +4,7 @@ import { todayStr, nowTimeStr, timeMinForDate } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/Modal";
 import ConfirmModal from "@/components/ConfirmModal";
-import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
+import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import type { ActionItem, TeamContribution, TaskExtension } from "@/lib/types";
 import type { TeamContext } from "../DashboardPage";
@@ -124,6 +124,7 @@ export default function TasksPage() {
     unknown
   > | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [statusChangePending, setStatusChangePending] = useState<{
     task: ActionItem;
@@ -213,55 +214,55 @@ export default function TasksPage() {
     const ext = extensions.get(t.id);
     const isLeader = team?.my_role === "leader";
     const isMine = t.assignee_id === currentUser?.id;
-    const fmtD = (iso: string) => {
-      const d = new Date(iso);
-      return `${d.getMonth() + 1}/${d.getDate()}`;
-    };
 
     if (ext?.status === "pending") {
+      const isDelete = ext.type === "delete";
       const parts: string[] = [];
-      if (ext.requested_description) parts.push("이름");
-      if (ext.requested_difficulty != null) parts.push("난이도");
-      if (ext.requested_assignee_id != null) parts.push("담당자");
-      if (ext.requested_due_date) parts.push("마감일");
+      if (!isDelete) {
+        if (ext.requested_description) parts.push("이름");
+        if (ext.requested_difficulty != null) parts.push("난이도");
+        if (ext.requested_assignee_id != null) parts.push("담당자");
+        if (ext.requested_due_date) parts.push("마감일");
+      }
+      const leaderActions = (
+        <span className="tc-ext-acts">
+          <button
+            className="tc-ext-reason-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewingExt(ext);
+            }}
+            title="사유 보기"
+          >
+            <i className="ti ti-message-circle" /> 사유 확인
+          </button>
+          <button className="tc-ext-ok" onClick={() => void approveExt(ext.id)}>
+            수락
+          </button>
+          <button className="tc-ext-no" onClick={() => void rejectExt(ext.id)}>
+            거절
+          </button>
+        </span>
+      );
       return (
         <div className="tc-ext" onClick={(e) => e.stopPropagation()}>
-          <span className="tc-ext-label">
-            <i className="ti ti-clock-hour-4" />
-            {parts.length > 0
-              ? parts.map((p) => (
-                  <span key={p} className="tc-ext-field-badge">
-                    {p}
-                  </span>
-                ))
-              : " 수정"}{" "}
-            변경 요청 중…
-          </span>
-          {isLeader ? (
-            <span className="tc-ext-acts">
-              <button
-                className="tc-ext-reason-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setViewingExt(ext);
-                }}
-                title="수정 내용 및 사유 보기"
-              >
-                <i className="ti ti-message-circle" /> 사유 확인
-              </button>
-              <button
-                className="tc-ext-ok"
-                onClick={() => void approveExt(ext.id)}
-              >
-                수락
-              </button>
-              <button
-                className="tc-ext-no"
-                onClick={() => void rejectExt(ext.id)}
-              >
-                거절
-              </button>
+          {isDelete ? (
+            <span className="tc-ext-label" style={{ color: "var(--coral)" }}>
+              <i className="ti ti-trash" /> 삭제 요청 중…
             </span>
+          ) : (
+            <span className="tc-ext-label">
+              <i className="ti ti-clock-hour-4" />
+              {parts.map((p) => (
+                <span key={p} className="tc-ext-field-badge">
+                  {p}
+                </span>
+              ))}{" "}
+              변경 요청 중…
+            </span>
+          )}
+          {isLeader ? (
+            leaderActions
           ) : (
             <span className="tc-ext-wait">대기 중</span>
           )}
@@ -269,9 +270,11 @@ export default function TasksPage() {
       );
     }
     if (ext?.status === "rejected" && (overdue || isMine)) {
+      const isDelete = ext.type === "delete";
       return (
-        <span className="tc-ext-label" style={{ color: "var(--red)" }}>
-          <i className="ti ti-x" /> 수정 거절됨 · 카드를 눌러 재요청
+        <span className="tc-ext-label" style={{ color: "var(--coral)" }}>
+          <i className="ti ti-x" /> {isDelete ? "삭제 거절됨" : "수정 거절됨"} ·
+          카드를 눌러 재요청
         </span>
       );
     }
@@ -426,15 +429,23 @@ export default function TasksPage() {
     }
   }
 
-  async function deleteTask() {
+  async function requestDeletion() {
     if (!editTarget || deleting) return;
+    if (!deleteReason.trim()) {
+      showToast("삭제 사유를 입력해 주세요", "error");
+      return;
+    }
     setDeleting(true);
     try {
-      await apiDelete(`/action-items/${editTarget.id}`);
-      setTasks((ts) => ts.filter((t) => t.id !== editTarget.id));
+      await apiPost(`/action-items/${editTarget.id}/extension`, {
+        type: "delete",
+        reason: deleteReason.trim(),
+      });
       setConfirmDelete(false);
+      setDeleteReason("");
       setEditTarget(null);
-      showToast("태스크가 삭제되었습니다");
+      await loadExtensions();
+      showToast("삭제 요청을 보냈어요. 팀장 승인을 기다려 주세요");
     } catch (e) {
       showToast((e as Error).message, "error");
     } finally {
@@ -1186,22 +1197,53 @@ export default function TasksPage() {
         />
       )}
 
-      {/* 삭제 확인 모달 */}
+      {/* 삭제 요청 모달 */}
       {confirmDelete && editTarget && (
-        <ConfirmModal
-          title="태스크 삭제"
-          message={
+        <Modal
+          title="태스크 삭제 요청"
+          onClose={() => {
+            setConfirmDelete(false);
+            setDeleteReason("");
+          }}
+          actions={
             <>
-              <strong>{editTarget.description}</strong>을(를) 삭제할까요?
-              <br />이 작업은 되돌릴 수 없습니다.
+              <button
+                className="btn"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  setDeleteReason("");
+                }}
+              >
+                취소
+              </button>
+              <button
+                className="btn btn-danger"
+                disabled={deleting}
+                onClick={() => void requestDeletion()}
+              >
+                삭제 요청 보내기
+              </button>
             </>
           }
-          confirmLabel="삭제"
-          danger
-          busy={deleting}
-          onConfirm={() => void deleteTask()}
-          onClose={() => setConfirmDelete(false)}
-        />
+        >
+          <p style={{ marginBottom: 12, color: "var(--text-soft)" }}>
+            <strong style={{ color: "var(--text-main)" }}>
+              {editTarget.description}
+            </strong>{" "}
+            태스크의 삭제를 팀장에게 요청합니다.
+          </p>
+          <div className="field">
+            <label className="field-label">삭제 사유</label>
+            <textarea
+              className="input"
+              rows={3}
+              placeholder="삭제가 필요한 이유를 입력해 주세요"
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              style={{ resize: "none" }}
+            />
+          </div>
+        </Modal>
       )}
 
       {/* 완료 → 다른 상태 변경 경고 모달 */}
@@ -1345,97 +1387,121 @@ export default function TasksPage() {
           <div className="ext-req-header">
             <div className="ext-req-who">
               <i className="ti ti-user-circle" />
-              <strong>{viewingExt.requester_name}</strong>님의 수정 요청
+              <strong>{viewingExt.requester_name}</strong>님의{" "}
+              {viewingExt.type === "delete" ? "삭제" : "수정"} 요청
             </div>
             <div className="ext-req-task">{viewingExt.task_description}</div>
           </div>
 
-          {/* 변경 항목 diff */}
-          {(viewingExt.requested_description ||
-            viewingExt.requested_difficulty != null ||
-            viewingExt.requested_assignee_id != null ||
-            viewingExt.requested_due_date) && (
-            <div className="ext-changes">
-              <div className="ext-changes-title">변경 내용</div>
-              {viewingExt.requested_description && (
-                <div className="ext-diff-row">
-                  <span className="ext-diff-label">이름</span>
-                  <div className="ext-diff-val">
-                    <span className="ext-diff-before">
-                      {viewingExt.task_description}
-                    </span>
-                    <i className="ti ti-arrow-right ext-diff-arrow" />
-                    <span className="ext-diff-after">
-                      {viewingExt.requested_description}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {viewingExt.requested_difficulty != null && (
-                <div className="ext-diff-row">
-                  <span className="ext-diff-label">난이도</span>
-                  <div className="ext-diff-val">
-                    <span className="ext-diff-before">
-                      {"★".repeat(viewingExt.current_difficulty ?? 1)}
-                    </span>
-                    <i className="ti ti-arrow-right ext-diff-arrow" />
-                    <span className="ext-diff-after">
-                      {"★".repeat(viewingExt.requested_difficulty)}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {viewingExt.requested_assignee_id != null && (
-                <div className="ext-diff-row">
-                  <span className="ext-diff-label">담당자</span>
-                  <div className="ext-diff-val">
-                    <span className="ext-diff-before">
-                      {viewingExt.current_assignee_id != null
-                        ? (members.find(
-                            (m) => m.user_id === viewingExt.current_assignee_id,
-                          )?.name ?? "알 수 없음")
-                        : "미지정"}
-                    </span>
-                    <i className="ti ti-arrow-right ext-diff-arrow" />
-                    <span className="ext-diff-after">
-                      {viewingExt.requested_assignee_id === -1
-                        ? "미지정"
-                        : (members.find(
-                            (m) =>
-                              m.user_id === viewingExt.requested_assignee_id,
-                          )?.name ?? "알 수 없음")}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {viewingExt.requested_due_date && (
-                <div className="ext-diff-row">
-                  <span className="ext-diff-label">마감일</span>
-                  <div className="ext-diff-val">
-                    <span className="ext-diff-before">
-                      {viewingExt.current_due_date
-                        ? new Date(
-                            viewingExt.current_due_date,
-                          ).toLocaleDateString("ko-KR")
-                        : "없음"}
-                    </span>
-                    <i className="ti ti-arrow-right ext-diff-arrow" />
-                    <span className="ext-diff-after">
-                      {new Date(
-                        viewingExt.requested_due_date,
-                      ).toLocaleDateString("ko-KR")}
-                    </span>
-                  </div>
-                </div>
-              )}
+          {/* 삭제 요청 안내 */}
+          {viewingExt.type === "delete" && (
+            <div
+              className="ext-changes"
+              style={{ borderColor: "var(--coral)", marginBottom: 12 }}
+            >
+              <div
+                className="ext-changes-title"
+                style={{
+                  background: "var(--coral-soft)",
+                  color: "var(--coral)",
+                }}
+              >
+                <i className="ti ti-trash" /> 태스크 삭제 요청
+              </div>
+              <div className="ext-diff-row">
+                이 태스크를 완전히 삭제하길 요청합니다.
+              </div>
             </div>
           )}
 
-          {/* 수정 사유 */}
+          {/* 변경 항목 diff */}
+          {viewingExt.type !== "delete" &&
+            (viewingExt.requested_description ||
+              viewingExt.requested_difficulty != null ||
+              viewingExt.requested_assignee_id != null ||
+              viewingExt.requested_due_date) && (
+              <div className="ext-changes">
+                <div className="ext-changes-title">변경 내용</div>
+                {viewingExt.requested_description && (
+                  <div className="ext-diff-row">
+                    <span className="ext-diff-label">이름</span>
+                    <div className="ext-diff-val">
+                      <span className="ext-diff-before">
+                        {viewingExt.task_description}
+                      </span>
+                      <i className="ti ti-arrow-right ext-diff-arrow" />
+                      <span className="ext-diff-after">
+                        {viewingExt.requested_description}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {viewingExt.requested_difficulty != null && (
+                  <div className="ext-diff-row">
+                    <span className="ext-diff-label">난이도</span>
+                    <div className="ext-diff-val">
+                      <span className="ext-diff-before">
+                        {"★".repeat(viewingExt.current_difficulty ?? 1)}
+                      </span>
+                      <i className="ti ti-arrow-right ext-diff-arrow" />
+                      <span className="ext-diff-after">
+                        {"★".repeat(viewingExt.requested_difficulty)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {viewingExt.requested_assignee_id != null && (
+                  <div className="ext-diff-row">
+                    <span className="ext-diff-label">담당자</span>
+                    <div className="ext-diff-val">
+                      <span className="ext-diff-before">
+                        {viewingExt.current_assignee_id != null
+                          ? (members.find(
+                              (m) =>
+                                m.user_id === viewingExt.current_assignee_id,
+                            )?.name ?? "알 수 없음")
+                          : "미지정"}
+                      </span>
+                      <i className="ti ti-arrow-right ext-diff-arrow" />
+                      <span className="ext-diff-after">
+                        {viewingExt.requested_assignee_id === -1
+                          ? "미지정"
+                          : (members.find(
+                              (m) =>
+                                m.user_id === viewingExt.requested_assignee_id,
+                            )?.name ?? "알 수 없음")}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {viewingExt.requested_due_date && (
+                  <div className="ext-diff-row">
+                    <span className="ext-diff-label">마감일</span>
+                    <div className="ext-diff-val">
+                      <span className="ext-diff-before">
+                        {viewingExt.current_due_date
+                          ? new Date(
+                              viewingExt.current_due_date,
+                            ).toLocaleDateString("ko-KR")
+                          : "없음"}
+                      </span>
+                      <i className="ti ti-arrow-right ext-diff-arrow" />
+                      <span className="ext-diff-after">
+                        {new Date(
+                          viewingExt.requested_due_date,
+                        ).toLocaleDateString("ko-KR")}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          {/* 사유 */}
           <div className="ext-reason-box">
             <div className="ext-reason-label">
               <i className="ti ti-message-circle" />
-              수정 사유
+              {viewingExt.type === "delete" ? "삭제 사유" : "수정 사유"}
             </div>
             <div className="ext-reason-body">
               {viewingExt.reason || "(작성된 사유가 없습니다)"}

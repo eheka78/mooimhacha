@@ -8,6 +8,7 @@ import {
 
 // 기한 연장 요청 상태: 요청됨(pending) → 팀장 수락(approved)/거절(rejected).
 export type ExtensionStatus = 'pending' | 'approved' | 'rejected';
+export type ExtensionType = 'change' | 'delete';
 
 // 태스크(액션 아이템) 기한 연장 요청 1건. 거절/수락 후 재요청은 새 행으로 남는다.
 @Entity('task_extension_requests')
@@ -21,6 +22,9 @@ export class TaskExtensionRequest {
 
   @Column({ type: 'bigint', unsigned: true })
   requester_id!: number;
+
+  @Column({ type: 'varchar', length: 16, default: 'change' })
+  type!: ExtensionType;
 
   @Column({ type: 'datetime', nullable: true })
   requested_due_date!: Date | null;

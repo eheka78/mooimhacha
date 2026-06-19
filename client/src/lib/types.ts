@@ -73,6 +73,7 @@ export interface TaskExtension {
   requester_id: number;
   requester_name: string;
   task_description: string;
+  type: "change" | "delete";
   current_due_date: string | null;
   current_difficulty: number | null;
   current_assignee_id: number | null;
