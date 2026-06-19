@@ -1751,6 +1751,7 @@ export default function MeetingPage() {
                         className="input"
                         type="number"
                         min={1}
+                        step={5}
                         value={editMinutes}
                         disabled={selected.status === "ended"}
                         onChange={(e) =>
@@ -1892,6 +1893,7 @@ export default function MeetingPage() {
               className="input"
               type="number"
               min={5}
+              step={5}
               value={newMinutes}
               onChange={(e) =>
                 setNewMinutes(
@@ -1931,7 +1933,7 @@ export default function MeetingPage() {
                 value={newAgendaInput}
                 onChange={(e) => setNewAgendaInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     addAgendaToList();
                   }
