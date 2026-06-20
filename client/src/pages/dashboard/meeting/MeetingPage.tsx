@@ -113,7 +113,6 @@ export default function MeetingPage() {
   const [joinedCount, setJoinedCount] = useState(0);
   const [joiningMeeting, setJoiningMeeting] = useState(false);
   const [absenceInput, setAbsenceInput] = useState("");
-  const [absenceSubmitted, setAbsenceSubmitted] = useState(false);
   // 회의별 출결 요약 (목록 배지·미처리 표시용)
   const [summaries, setSummaries] = useState<Map<number, AttendanceSummary>>(
     new Map(),
@@ -576,32 +575,15 @@ export default function MeetingPage() {
       await apiPost(`/meetings/${selectedId}/absences`, {
         reason: absenceInput.trim(),
       });
-      setAbsenceSubmitted(true);
+      setModalOpen(null);
+      setAbsenceInput("");
+      showToast("사유가 등록됐습니다");
       await Promise.all([loadAttendance(selectedId), loadSummaries()]);
     } catch (e) {
       showToast((e as Error).message, "error");
     } finally {
       setBusy(false);
     }
-  }
-
-  function shareKakao(reason: string = absenceInput) {
-    if (!window.Kakao?.isInitialized()) {
-      showToast(
-        "카카오 SDK가 초기화되지 않았습니다. VITE_KAKAO_JS_KEY를 확인해 주세요.",
-        "error",
-      );
-      return;
-    }
-    const meetingName = selected?.topic ?? "제목 없는 회의";
-    window.Kakao.Share.sendCustom({
-      templateId: 134304,
-      templateArgs: {
-        title: `[${team?.name ?? "팀"}] ${meetingName} 결석 동의 알림`,
-        description: `${me?.name ?? "팀원"}님이 결석 사유를 등록했습니다.\n회의: ${meetingName} | 사유: ${reason}`,
-        button: "회의실에서 확인하기",
-      },
-    });
   }
 
   // 다른 멤버의 결석 사유에 동의 — 정족수 도달 시 출석 인정으로 자동 전환
@@ -1537,25 +1519,13 @@ export default function MeetingPage() {
                                         사유 입력
                                       </button>
                                     )}
-                                    {/* 본인 + pending: 동의 수 + 카카오 공유 */}
+                                    {/* 본인 + pending: 동의 수 */}
                                     {isMe &&
                                       mem.absence?.status === "pending" && (
-                                        <>
-                                          <span className="att-consent-count">
-                                            동의 {mem.absence.consent_count}/
-                                            {attendance.consent_required}
-                                          </span>
-                                          <button
-                                            className="btn-kakao"
-                                            onClick={() =>
-                                              shareKakao(mem.absence!.reason)
-                                            }
-                                          >
-                                            <i className="ti ti-brand-kakao">
-                                              <span>카카오 공유</span>
-                                            </i>
-                                          </button>
-                                        </>
+                                        <span className="att-consent-count">
+                                          동의 {mem.absence.consent_count}/
+                                          {attendance.consent_required}
+                                        </span>
                                       )}
                                     {/* 타인 + pending: 동의/동의함 */}
                                     {!isMe &&
@@ -2269,78 +2239,43 @@ export default function MeetingPage() {
           onClose={() => {
             setModalOpen(null);
             setAbsenceInput("");
-            setAbsenceSubmitted(false);
           }}
           actions={
-            absenceSubmitted ? (
+            <>
               <button
                 className="btn"
                 onClick={() => {
                   setModalOpen(null);
                   setAbsenceInput("");
-                  setAbsenceSubmitted(false);
                 }}
               >
-                닫기
+                취소
               </button>
-            ) : (
-              <>
-                <button
-                  className="btn"
-                  onClick={() => {
-                    setModalOpen(null);
-                    setAbsenceInput("");
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => void saveAbsence()}
-                  disabled={busy}
-                >
-                  제출
-                </button>
-              </>
-            )
+              <button
+                className="btn btn-primary"
+                onClick={() => void saveAbsence()}
+                disabled={busy}
+              >
+                제출
+              </button>
+            </>
           }
         >
-          {absenceSubmitted ? (
-            <>
-              <div className="modal-sub">
-                결석 사유가 등록되었습니다. 팀원들에게 공유해보세요.
-              </div>
-              <button
-                className="btn-kakao"
-                style={{
-                  width: "100%",
-                  justifyContent: "center",
-                  padding: "10px 16px",
-                  fontSize: "13px",
-                }}
-                onClick={() => shareKakao()}
-              >
-                <i className="ti ti-brand-kakao" />
-                카카오톡으로 공유
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="modal-sub">
-                팀원 과반이 동의하면 출석으로 인정됩니다.
-              </div>
-              <div className="field">
-                <label className="field-label">사유</label>
-                <textarea
-                  className="input"
-                  rows={3}
-                  placeholder="예) 가족 행사로 참석하지 못했습니다."
-                  value={absenceInput}
-                  onChange={(e) => setAbsenceInput(e.target.value)}
-                />
-              </div>
-            </>
-          )}
+          <>
+            <div className="modal-sub">
+              팀원 과반이 동의하면 출석으로 인정됩니다.
+            </div>
+            <div className="field">
+              <label className="field-label">사유</label>
+              <textarea
+                className="input"
+                rows={3}
+                placeholder="예) 가족 행사로 참석하지 못했습니다."
+                value={absenceInput}
+                onChange={(e) => setAbsenceInput(e.target.value)}
+              />
+            </div>
+          </>
         </Modal>
       )}
 
