@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource, FindOptionsWhere, In, Repository } from 'typeorm';
 import { Meeting } from '../entities/meeting.entity';
+import { Team } from '../entities/team.entity';
 import { Agenda } from '../entities/agenda.entity';
 import { Utterance } from '../entities/utterance.entity';
 import { Decision } from '../entities/decision.entity';
@@ -166,42 +167,52 @@ export class MeetingsService {
   }
 
   private async notifyMeetingStarted(meeting: Meeting): Promise<void> {
-    const settings = await this.settingsRepo.findOne({
-      where: { team_id: meeting.team_id },
-    });
+    const [settings, team] = await Promise.all([
+      this.settingsRepo.findOne({ where: { team_id: meeting.team_id } }),
+      this.dataSource
+        .getRepository(Team)
+        .findOne({ where: { id: meeting.team_id } }),
+    ]);
     if (!settings?.slack_bot_token || !settings.slack_channel_id) return;
     await this.slackService.sendChannelMessage(
       settings.slack_bot_token,
       settings.slack_channel_id,
-      `🚀 [${meeting.topic ?? '회의'}] 지금 바로 시작됐습니다! 참여해주세요`,
+      [
+        `🚀 *회의 시작* — ${team?.name ?? '팀'}`,
+        `> *${meeting.topic ?? '회의'}*`,
+        `> 지금 바로 참여해주세요!`,
+      ].join('\n'),
     );
   }
 
   private async notifyMeetingEnded(meeting: Meeting): Promise<void> {
-    const settings = await this.settingsRepo.findOne({
-      where: { team_id: meeting.team_id },
-    });
-    if (!settings?.slack_bot_token || !settings.slack_channel_id) return;
-
-    const [decisions, actions] = await Promise.all([
+    const [settings, team, decisions, actions] = await Promise.all([
+      this.settingsRepo.findOne({ where: { team_id: meeting.team_id } }),
+      this.dataSource
+        .getRepository(Team)
+        .findOne({ where: { id: meeting.team_id } }),
       this.decisionRepo.find({ where: { meeting_id: meeting.id } }),
       this.actionRepo.find({ where: { meeting_id: meeting.id } }),
     ]);
+    if (!settings?.slack_bot_token || !settings.slack_channel_id) return;
 
-    const lines: string[] = [`🏁 [${meeting.topic ?? '회의'}] 종료됐습니다`];
+    const lines: string[] = [
+      `🏁 *회의 종료* — ${team?.name ?? '팀'}`,
+      `> *${meeting.topic ?? '회의'}*`,
+    ];
 
     if (decisions.length > 0) {
-      lines.push(`\n📋 결정 사항 (${decisions.length}개)`);
-      decisions.forEach((d) => lines.push(`• ${d.content}`));
+      lines.push(`\n📋 *결정 사항* (${decisions.length}개)`);
+      decisions.forEach((d) => lines.push(`> • ${d.content}`));
     }
 
     if (actions.length > 0) {
-      lines.push(`\n✅ 액션 아이템 (${actions.length}개)`);
+      lines.push(`\n✅ *액션 아이템* (${actions.length}개)`);
       actions.forEach((a) => {
         const due = a.due_date
-          ? ` (마감: ${new Date(a.due_date).toLocaleDateString('ko-KR')})`
+          ? ` — ${new Date(a.due_date).toLocaleDateString('ko-KR')}`
           : '';
-        lines.push(`• ${a.description}${due}`);
+        lines.push(`> • ${a.description}${due}`);
       });
     }
 
