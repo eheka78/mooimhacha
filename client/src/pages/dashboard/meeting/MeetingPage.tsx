@@ -1247,7 +1247,7 @@ export default function MeetingPage() {
                               letterSpacing: 0,
                             }}
                           >
-                            {`<${prevMeeting?.topic}>` ?? "이전 회의"}
+                            {prevMeeting?.topic ?? "이전 회의"}
                           </span>
                         </div>
                         {prevDecisions.map((d) => (
