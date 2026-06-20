@@ -2303,6 +2303,16 @@ export default function MeetingPage() {
               placeholder="회의에서 결정된 내용을 입력하세요"
               value={decInput}
               onChange={(e) => setDecInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Enter" &&
+                  !e.shiftKey &&
+                  !e.nativeEvent.isComposing
+                ) {
+                  e.preventDefault();
+                  void saveDecision();
+                }
+              }}
               autoFocus
             />
           </div>
