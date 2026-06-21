@@ -9,6 +9,7 @@ import { PresenceEvent } from '../entities/presence-event.entity';
 import { AnomalyEvent } from '../entities/anomaly-event.entity';
 import { ActionItem } from '../entities/action-item.entity';
 import { TeamMembership } from '../entities/team-membership.entity';
+import { MeetingAbsence } from '../entities/meeting-absence.entity';
 import {
   ContributionVisibility,
   TeamSettings,
@@ -16,6 +17,7 @@ import {
 import { User } from '../entities/user.entity';
 import { TeamsService } from '../teams/teams.service';
 import { ContributionClient } from './contribution.client';
+import { absentUnexcusedIds } from './contribution.mapper';
 import { TeamPipelineRequest, TeamSettingsPayload } from './contribution.types';
 
 @Injectable()
@@ -37,6 +39,8 @@ export class ContributionsService {
     private actionRepo: Repository<ActionItem>,
     @InjectRepository(TeamMembership)
     private membershipRepo: Repository<TeamMembership>,
+    @InjectRepository(MeetingAbsence)
+    private absenceRepo: Repository<MeetingAbsence>,
     @InjectRepository(TeamSettings)
     private settingsRepo: Repository<TeamSettings>,
     @InjectRepository(User)
@@ -239,6 +243,7 @@ export class ContributionsService {
         teamPayload,
         meetings,
         memberships.filter((m) => !m.deleted_at).map((m) => m.user_id),
+        memberships,
       ),
     );
 
@@ -296,6 +301,7 @@ export class ContributionsService {
     },
     meetings: Meeting[],
     currentMemberIds: number[],
+    memberships: TeamMembership[],
   ): Promise<TeamPipelineRequest> {
     const ids = meetings.map((m) => m.id);
     const [utterances, presence, anomalies] =
@@ -316,6 +322,19 @@ export class ContributionsService {
             this.anomalyRepo.find({ where: { meeting_id: In(ids) } }),
           ])
         : [[], [], []];
+    // 승인된 사유결석 — 무단결석 판정서 제외(보호)하기 위해 로드
+    const approvedAbsences =
+      ids.length > 0
+        ? await this.absenceRepo.find({
+            where: { meeting_id: In(ids), status: 'approved' },
+            select: { meeting_id: true, user_id: true },
+          })
+        : [];
+    const activeMemberships = memberships.map((mb) => ({
+      user_id: mb.user_id,
+      joinedAtMs: mb.joined_at.getTime(),
+      deletedAtMs: mb.deleted_at ? mb.deleted_at.getTime() : null,
+    }));
 
     const groupByMeeting = <T extends { meeting_id: number }>(rows: T[]) => {
       const map = new Map<number, T[]>();
@@ -329,6 +348,7 @@ export class ContributionsService {
     const uttByMeeting = groupByMeeting(utterances);
     const presByMeeting = groupByMeeting(presence);
     const anomByMeeting = groupByMeeting(anomalies);
+    const excusedByMeeting = groupByMeeting(approvedAbsences);
 
     return {
       team_id: teamId,
@@ -341,6 +361,17 @@ export class ContributionsService {
         const joined = new Set(
           pres.filter((p) => p.event_type === 'join').map((p) => p.user_id),
         );
+        // 무단결석(입장 X·승인 사유결석 아님) — 누적(②)에 0점으로 포함시킬 멤버
+        const absent_user_ids = absentUnexcusedIds({
+          meetingType: m.meeting_type,
+          isInvalidated: m.is_invalidated,
+          meetingAtMs: m.scheduled_at.getTime(),
+          joinedIds: joined,
+          excusedIds: new Set(
+            (excusedByMeeting.get(m.id) ?? []).map((a) => a.user_id),
+          ),
+          activeMemberships,
+        });
         return {
           meeting: {
             id: m.id,
@@ -354,6 +385,7 @@ export class ContributionsService {
           team_settings: settings,
           participant_user_ids:
             joined.size > 0 ? [...joined] : currentMemberIds,
+          absent_user_ids,
           utterances: (uttByMeeting.get(m.id) ?? []).map((u) => ({
             user_id: u.user_id,
             char_count: u.char_count,

@@ -216,6 +216,33 @@ export function deriveMemberData(
   };
 }
 
+// 무단결석(한 번도 입장 X · 승인된 사유결석 아님) 멤버 ID — docs/06: ① = 0, 누적(②)에 포함.
+// 이 멤버들에게도 회의 행(absent 0행)을 생성해 엔진에 보내야 0점이 누적에 반영된다.
+// 비정규·무효 회의는 엔진이 누적서 제외하므로 빈 배열로 둔다.
+export function absentUnexcusedIds(input: {
+  meetingType: string;
+  isInvalidated: boolean;
+  meetingAtMs: number;
+  joinedIds: ReadonlySet<number>;
+  excusedIds: ReadonlySet<number>;
+  activeMemberships: {
+    user_id: number;
+    joinedAtMs: number;
+    deletedAtMs: number | null;
+  }[];
+}): number[] {
+  if (input.meetingType !== 'regular' || input.isInvalidated) return [];
+  const out = new Set<number>();
+  for (const m of input.activeMemberships) {
+    if (m.joinedAtMs > input.meetingAtMs) continue; // 회의 후 합류
+    if (m.deletedAtMs != null && m.deletedAtMs < input.meetingAtMs) continue; // 회의 전 탈퇴
+    if (input.joinedIds.has(m.user_id)) continue; // 입장함 → 무단결석 아님
+    if (input.excusedIds.has(m.user_id)) continue; // 승인된 사유결석 → 보호(제외)
+    out.add(m.user_id);
+  }
+  return [...out];
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // 액션 아이템 → 외부 ActionItem(③ 테스크 입력). 분모 정책은 로컬 스코어러와 동일:

@@ -91,7 +91,11 @@ export interface TeamPipelineRequest {
   team_id: number;
   team_settings: TeamSettingsPayload;
   members: { user_id: number; role: string }[];
-  meetings: (MeetingRawInput & { is_invalidated: boolean })[];
+  // absent_user_ids: 무단결석(입장 X·사유결석 아님) 멤버 — 누적(②)에 0점으로 포함시킬 대상.
+  meetings: (MeetingRawInput & {
+    is_invalidated: boolean;
+    absent_user_ids: number[];
+  })[];
   action_items: TeamContributionRequest['action_items'];
 }
 
