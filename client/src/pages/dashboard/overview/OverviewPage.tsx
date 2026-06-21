@@ -394,54 +394,63 @@ export default function OverviewPage() {
       </div>
 
       {/* 미완료 태스크 */}
-      <Card icon="ti ti-checklist" title="미완료 태스크">
-        <div style={{ padding: "2px 16px 14px" }}>
-          {derived.open.length === 0 && (
-            <div style={{ fontSize: 12.5, color: "var(--text-soft)" }}>
-              미완료 태스크가 없습니다.
-            </div>
-          )}
-          {derived.open.slice(0, 10).map((t) => {
-            const due = taskDueLabel(t.due_date);
-            return (
-              <div key={t.id} className="task-mini">
-                <div
-                  className="chk-mini"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => void toggleTask(t)}
-                />
-                <div style={{ flex: 1 }}>{t.description}</div>
-                <span
-                  style={{
-                    minWidth: 148,
-                    textAlign: "right",
-                    color: due ? due.color : "var(--text-soft)",
-                    fontWeight: due ? 700 : undefined,
-                  }}
-                >
-                  {due ? due.text : "—"}
-                </span>
-                <span
-                  style={{
-                    minWidth: 56,
-                    textAlign: "right",
-                    color: "var(--text-soft)",
-                  }}
-                >
-                  {derived.nameById.get(t.assignee_id ?? -1) ?? "—"}
-                </span>
+      <div data-tour="ov-tasks">
+        <Card icon="ti ti-checklist" title="미완료 태스크">
+          <div style={{ padding: "2px 16px 14px" }}>
+            {derived.open.length === 0 && (
+              <div style={{ fontSize: 12.5, color: "var(--text-soft)" }}>
+                미완료 태스크가 없습니다.
               </div>
-            );
-          })}
-          {derived.open.length > 10 && (
-            <div
-              style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 8 }}
-            >
-              +{derived.open.length - 10}개
-            </div>
-          )}
-        </div>
-      </Card>
+            )}
+            {derived.open.slice(0, 10).map((t) => {
+              const due = taskDueLabel(t.due_date);
+              return (
+                <div key={t.id} className="task-mini">
+                  <div
+                    className="chk-mini"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => void toggleTask(t)}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div>{t.description}</div>
+                    {t.detail && <div className="tm-detail">{t.detail}</div>}
+                  </div>
+                  <span
+                    style={{
+                      minWidth: 148,
+                      textAlign: "right",
+                      color: due ? due.color : "var(--text-soft)",
+                      fontWeight: due ? 700 : undefined,
+                    }}
+                  >
+                    {due ? due.text : "—"}
+                  </span>
+                  <span
+                    style={{
+                      minWidth: 56,
+                      textAlign: "right",
+                      color: "var(--text-soft)",
+                    }}
+                  >
+                    {derived.nameById.get(t.assignee_id ?? -1) ?? "—"}
+                  </span>
+                </div>
+              );
+            })}
+            {derived.open.length > 10 && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--text-soft)",
+                  marginTop: 8,
+                }}
+              >
+                +{derived.open.length - 10}개
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

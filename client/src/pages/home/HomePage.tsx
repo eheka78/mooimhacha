@@ -596,8 +596,11 @@ export default function HomePage() {
                         >
                           <i className="ti ti-check" />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="t-name">{t.description}</div>
+                          {t.detail && (
+                            <div className="t-detail">{t.detail}</div>
+                          )}
                           <div className="t-meta">
                             <span className="t-group">{t.group}</span>
                             {due && (

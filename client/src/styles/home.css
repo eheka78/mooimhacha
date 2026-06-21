@@ -353,6 +353,15 @@
   text-decoration: line-through;
   color: var(--text-soft);
 }
+/* 내 태스크 세부사항(선택 메모) — 1줄 말줄임 */
+.t-detail {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .t-meta {
   display: flex;
   align-items: center;

@@ -400,6 +400,15 @@
 .task-mini + .task-mini {
   box-shadow: inset 0 1px 0 var(--border-2);
 }
+/* 할 일 위젯 세부사항(선택 메모) — 1줄 말줄임 */
+.tm-detail {
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .chk-mini {
   width: 16px;
   height: 16px;
@@ -1265,7 +1274,8 @@
 
 .board {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* minmax(0,1fr): nowrap 세부사항이 컬럼을 밀어내지 않도록 최소폭 0 (grid blowout 방지) */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 13px;
 }
 .board-col {
@@ -1350,13 +1360,10 @@
 .tc-detail {
   margin: 4px 0 2px;
   font-size: 11px;
-  line-height: 1.5;
   color: var(--text-soft);
-  white-space: pre-wrap;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tc-due {
   flex-shrink: 0;
