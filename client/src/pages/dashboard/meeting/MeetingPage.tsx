@@ -1083,7 +1083,7 @@ export default function MeetingPage() {
         <div className="mdetail">
           {!selected ? (
             <div
-              style={{ padding: 24, fontSize: 13.5, color: "var(--text-soft)" }}
+              style={{ padding: 24, fontSize: 12.5, color: "var(--text-soft)" }}
             >
               왼쪽에서 회의를 선택하거나 새 회의를 만들어 보세요.
             </div>
