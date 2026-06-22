@@ -81,6 +81,9 @@ export default function SettingsPage() {
   const [actionBusy, setActionBusy] = useState(false);
   const [slackUserId, setSlackUserId] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [testingSlack, setTestingSlack] = useState<
+    "channel" | "dm" | "button" | null
+  >(null);
 
   const nicknameMap = useMemo(
     () =>
@@ -195,6 +198,35 @@ export default function SettingsPage() {
     navigator.clipboard?.writeText(detail.invite_code).catch(() => {});
     setInviteCopied(true);
     setTimeout(() => setInviteCopied(false), 2000);
+  }
+
+  function shareKakao() {
+    if (!detail || !team) return;
+    if (!window.Kakao?.isInitialized()) {
+      showToast("카카오 SDK가 초기화되지 않았습니다");
+      return;
+    }
+    window.Kakao.Share.sendDefault({
+      objectType: "feed",
+      content: {
+        title: `${me?.name ?? "팀원"}님이 초대하셨어요 🎉`,
+        description: `🏷 ${team.name}\n🔑 초대코드: ${detail.invite_code}`,
+        imageUrl: `${window.location.origin}/icon.png`,
+        link: {
+          mobileWebUrl: window.location.origin,
+          webUrl: window.location.origin,
+        },
+      },
+      buttons: [
+        {
+          title: "지금 합류하기",
+          link: {
+            mobileWebUrl: window.location.origin,
+            webUrl: window.location.origin,
+          },
+        },
+      ],
+    });
   }
 
   async function regenerateCode() {
@@ -368,6 +400,28 @@ export default function SettingsPage() {
     }
   }
 
+  async function testSlack(type: "channel" | "dm" | "button") {
+    if (!team) return;
+    setTestingSlack(type);
+    try {
+      await apiFetch(`/api/slack/test?team_id=${team.id}&type=${type}`, {
+        method: "POST",
+        headers: authHeader(),
+      });
+      showToast(
+        type === "channel"
+          ? "채널 메시지가 전송됐습니다"
+          : type === "button"
+            ? "버튼 포함 DM이 전송됐습니다. Slack에서 버튼을 클릭해 확인하세요"
+            : "개인 DM이 전송됐습니다",
+      );
+    } catch (err) {
+      showToast((err as Error).message || "전송 실패", "error");
+    } finally {
+      setTestingSlack(null);
+    }
+  }
+
   async function handleDelete() {
     if (!team || deleteConfirmName !== team.name) return;
     setDeleting(true);
@@ -436,6 +490,11 @@ export default function SettingsPage() {
       {/* 초대 코드 */}
       <Card icon="ti ti-key" title="초대 코드">
         <div data-tour="st-invite" style={{ padding: "8px 16px 16px" }}>
+          <div
+            style={{ marginBottom: 8, fontSize: 12, color: "var(--text-soft)" }}
+          >
+            이 코드를 팀원에게 공유하면 팀에 합류할 수 있습니다.
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
@@ -460,16 +519,23 @@ export default function SettingsPage() {
               <i className={inviteCopied ? "ti ti-check" : "ti ti-copy"} />
               {inviteCopied ? "복사됨" : "복사"}
             </button>
+            <button
+              className="btn"
+              onClick={shareKakao}
+              style={{
+                background: "#FEE500",
+                color: "#191919",
+                border: "none",
+              }}
+            >
+              <i className="ti ti-brand-kakao" />
+              카카오 공유
+            </button>
             {isLeader && (
               <button className="btn" onClick={regenerateCode}>
                 <i className="ti ti-refresh" /> 재발급
               </button>
             )}
-          </div>
-          <div
-            style={{ marginTop: 8, fontSize: 12, color: "var(--text-soft)" }}
-          >
-            이 코드를 팀원에게 공유하면 팀에 합류할 수 있습니다.
           </div>
         </div>
       </Card>
@@ -728,8 +794,7 @@ export default function SettingsPage() {
                 min={0}
                 max={240}
                 value={
-                  numDraft.late_max_minutes ??
-                  String(settings.late_max_minutes)
+                  numDraft.late_max_minutes ?? String(settings.late_max_minutes)
                 }
                 onChange={(e) => editNum("late_max_minutes", e.target.value)}
                 onBlur={(e) => commitNum("late_max_minutes", e.target.value)}
@@ -1027,6 +1092,17 @@ export default function SettingsPage() {
               </div>
               <div className="field">
                 <label className="field-label">Slack Channel ID</label>
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: 12,
+                    color: "var(--text-soft)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  채널 우클릭 → 채널 세부정보 → 채널 세부정보 보기 → 맨 아래
+                  채널 ID 복사
+                </p>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     className="input"
@@ -1048,18 +1124,59 @@ export default function SettingsPage() {
                     저장
                   </button>
                 </div>
-                <p
-                  style={{
-                    margin: "6px 0 0",
-                    fontSize: 12,
-                    color: "var(--text-soft)",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  채널 우클릭 → 채널 세부정보 → 채널 세부정보 보기 → 맨 아래
-                  채널 ID 복사
-                </p>
               </div>
+              {settings.slack_bot_token && (
+                <div className="field">
+                  <label className="field-label">연동 테스트</label>
+                  <p
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: 12,
+                      color: "var(--text-soft)",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    채널 ID와 내 Slack User ID를 저장한 뒤 테스트하세요. 버튼
+                    테스트는 DM으로 버튼이 전송되며, 클릭 시 서버 연동을
+                    확인합니다.
+                  </p>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <button
+                      className="btn"
+                      style={{ flex: 1 }}
+                      disabled={
+                        !settings.slack_channel_id || testingSlack === "channel"
+                      }
+                      onClick={() => void testSlack("channel")}
+                    >
+                      <i className="ti ti-send" />
+                      {testingSlack === "channel"
+                        ? "전송 중…"
+                        : "채널 메시지 테스트"}
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ flex: 1 }}
+                      disabled={testingSlack === "dm"}
+                      onClick={() => void testSlack("dm")}
+                    >
+                      <i className="ti ti-message" />
+                      {testingSlack === "dm" ? "전송 중…" : "개인 DM 테스트"}
+                    </button>
+                  </div>
+                  <button
+                    className="btn"
+                    style={{ width: "100%" }}
+                    disabled={testingSlack === "button"}
+                    onClick={() => void testSlack("button")}
+                  >
+                    <i className="ti ti-hand-click" />
+                    {testingSlack === "button"
+                      ? "전송 중…"
+                      : "버튼 클릭 테스트 (DM으로 버튼 전송)"}
+                  </button>
+                </div>
+              )}
               <hr
                 style={{
                   border: "none",
