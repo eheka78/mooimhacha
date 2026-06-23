@@ -54,9 +54,16 @@ export class ContributionClient {
       `[회의 산정] meeting_id=${payload.meeting.id} 참여자=${payload.participant_user_ids.length}명`,
     );
     const cfg = mapTeamSettings(payload.team_settings);
+    const thresholdSec = payload.team_settings.late_threshold_minutes * 60;
+    const maxSec =
+      payload.team_settings.late_max_minutes > 0
+        ? payload.team_settings.late_max_minutes * 60
+        : null;
+    const excusedLateSet = new Set(payload.excused_late_user_ids ?? []);
     const scores = await Promise.all(
       payload.participant_user_ids.map(async (uid) => {
         const { data, rawSpeechRatio } = deriveMemberData(payload, uid);
+        const isExcusedLate = excusedLateSet.has(uid);
         // 비정규 회의도 ① 점수는 산출해야 하므로 official 로 보낸다
         // (officialness 는 누적(②) 포함 여부에만 쓰이고, ②는 별도 호출에서 반영).
         const ext = await this.pipeline(
@@ -69,14 +76,23 @@ export class ContributionClient {
           speech_ratio: rawSpeechRatio,
           speech_consistency: null,
           attendance_ratio:
-            data.meeting_total_sec > 0
-              ? data.actual_attend_sec / data.meeting_total_sec
-              : null,
-          punctuality_score: data.absent
-            ? null
-            : data.late_sec > 300
-              ? 0.0
-              : 1.0,
+            data.absent || (maxSec !== null && data.late_sec > maxSec)
+              ? 0
+              : data.meeting_total_sec > 0
+                ? Math.max(
+                    0,
+                    data.actual_attend_sec -
+                      (!isExcusedLate && data.late_sec > thresholdSec
+                        ? data.late_sec
+                        : 0),
+                  ) / data.meeting_total_sec
+                : null,
+          punctuality_score:
+            data.absent || (maxSec !== null && data.late_sec > maxSec)
+              ? null
+              : isExcusedLate || data.late_sec <= thresholdSec
+                ? 1.0
+                : 0.0,
           // 포함 0건(최소시간 미만 등) = 측정 불가 → null.
           // 무단 결석은 엔진이 0점으로 포함시키므로 0 이 저장된다.
           meeting_score:
@@ -123,8 +139,17 @@ export class ContributionClient {
           )
           .map((mt) => {
             const { data } = deriveMemberData(mt, m.user_id);
+            // 지각 사유 승인자는 late_sec 를 0 으로 보내 외부 엔진도 패널티 없이 계산
+            const isExcusedLate = (mt.excused_late_user_ids ?? []).includes(
+              m.user_id,
+            );
+            const adjustedData = isExcusedLate
+              ? { ...data, late_sec: 0 }
+              : data;
             // 무효 처리된 회의는 비정규로 보내 누적에서 제외시킨다
-            return mt.is_invalidated ? { ...data, is_official: false } : data;
+            return mt.is_invalidated
+              ? { ...adjustedData, is_official: false }
+              : adjustedData;
           });
         if (rows.length === 0 && actions.length === 0) {
           return {
