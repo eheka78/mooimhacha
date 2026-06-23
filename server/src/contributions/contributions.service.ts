@@ -59,23 +59,41 @@ export class ContributionsService {
     if (!meeting) return [];
 
     const settings = await this.requireSettingsPayload(meeting.team_id);
-    const [utterances, agendas, presence, anomalies, members] =
-      await Promise.all([
-        // 산정에 쓰는 컬럼만 로드 (text TEXT 컬럼 제외 — 응답 크기·메모리 절약)
-        this.utteranceRepo.find({
-          where: { meeting_id: meetingId },
-          select: {
-            user_id: true,
-            char_count: true,
-            agenda_id: true,
-            confidence: true,
-          },
-        }),
-        this.agendaRepo.find({ where: { meeting_id: meetingId } }),
-        this.presenceRepo.find({ where: { meeting_id: meetingId } }),
-        this.anomalyRepo.find({ where: { meeting_id: meetingId } }),
-        this.membershipRepo.find({ where: { team_id: meeting.team_id } }),
-      ]);
+    const [
+      utterances,
+      agendas,
+      presence,
+      anomalies,
+      members,
+      approvedAbsences,
+    ] = await Promise.all([
+      // 산정에 쓰는 컬럼만 로드 (text TEXT 컬럼 제외 — 응답 크기·메모리 절약)
+      this.utteranceRepo.find({
+        where: { meeting_id: meetingId },
+        select: {
+          user_id: true,
+          char_count: true,
+          agenda_id: true,
+          confidence: true,
+        },
+      }),
+      this.agendaRepo.find({ where: { meeting_id: meetingId } }),
+      this.presenceRepo.find({ where: { meeting_id: meetingId } }),
+      this.anomalyRepo.find({ where: { meeting_id: meetingId } }),
+      this.membershipRepo.find({ where: { team_id: meeting.team_id } }),
+      this.absenceRepo.find({
+        where: { meeting_id: meetingId, status: 'approved' },
+        select: { user_id: true },
+      }),
+    ]);
+
+    // 지각 사유 승인자: join 기록 있음(지각) + 사유 approved → late_sec 차감 면제
+    const joinedSet = new Set(
+      presence.filter((p) => p.event_type === 'join').map((p) => p.user_id),
+    );
+    const excusedLateIds = approvedAbsences
+      .filter((a) => joinedSet.has(a.user_id))
+      .map((a) => a.user_id);
 
     const participantIds = members.map((m) => m.user_id);
 
@@ -108,6 +126,7 @@ export class ContributionsService {
         event_type: a.event_type,
         timestamp_offset_ms: a.timestamp_offset_ms,
       })),
+      excused_late_user_ids: excusedLateIds,
     };
 
     // 외부 산정 엔진(cc-team-8/Contribution)에 위임 — CONTRIBUTION_SERVICE_URL 필수
@@ -367,6 +386,10 @@ export class ContributionsService {
           ),
           activeMemberships,
         });
+        // 지각 사유 승인자: join 기록 있음(지각) + 사유 approved → late_sec 차감 면제
+        const excused_late_user_ids = (excusedByMeeting.get(m.id) ?? [])
+          .filter((a) => joined.has(a.user_id))
+          .map((a) => a.user_id);
         return {
           meeting: {
             id: m.id,
@@ -381,6 +404,7 @@ export class ContributionsService {
           participant_user_ids:
             joined.size > 0 ? [...joined] : currentMemberIds,
           absent_user_ids,
+          excused_late_user_ids,
           utterances: (uttByMeeting.get(m.id) ?? []).map((u) => ({
             user_id: u.user_id,
             char_count: u.char_count,
@@ -438,6 +462,12 @@ export class ContributionsService {
       weight_speech_in_meeting: s?.weight_speech_in_meeting ?? 0.6,
       weight_attend_in_meeting: s?.weight_attend_in_meeting ?? 0.4,
       leader_bonus_multiplier: s?.leader_bonus_multiplier ?? 1.0,
+      late_threshold_minutes:
+        s?.late_threshold_minutes != null
+          ? Number(s.late_threshold_minutes)
+          : 5,
+      late_max_minutes:
+        s?.late_max_minutes != null ? Number(s.late_max_minutes) : 0,
     };
   }
 

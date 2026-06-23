@@ -36,6 +36,8 @@ export interface MeetingScoreRequest {
     event_type: string;
     timestamp_offset_ms: number;
   }[];
+  // 지각했지만 사유가 승인된 유저 — late_sec 차감 면제
+  excused_late_user_ids?: number[];
 }
 
 export interface MeetingScoreResult {
@@ -121,4 +123,6 @@ export interface TeamSettingsPayload {
   weight_speech_in_meeting: number;
   weight_attend_in_meeting: number;
   leader_bonus_multiplier: number;
+  late_threshold_minutes: number;
+  late_max_minutes: number;
 }
